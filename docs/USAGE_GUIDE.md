@@ -1,16 +1,14 @@
-# Autonomy MCP Usage Guide
+# Autonomous MCP Usage Guide
 
-This guide covers common usage patterns and scenarios for Autonomy MCP.
+This guide covers practical usage patterns for Autonomous MCP, a Python package that implements AI-assisted software development through the Generate-Verify loop.
 
 ## Table of Contents
 
 - [Quick Start](#quick-start)
 - [Configuration](#configuration)
-- [Repository Setup](#repository-setup)
-- [Issue Processing](#issue-processing)
-- [Agent Customization](#agent-customization)
-- [Templates](#templates)
-- [GitHub Actions Integration](#github-actions-integration)
+- [Basic Usage](#basic-usage)
+- [Project Templates](#project-templates)
+- [GitHub Integration](#github-integration)
 - [Troubleshooting](#troubleshooting)
 
 ## Quick Start
@@ -21,529 +19,373 @@ This guide covers common usage patterns and scenarios for Autonomy MCP.
 pip install autonomy-mcp
 ```
 
-### 2. GitHub Token Setup
+### 2. Basic Setup
 
-Create a GitHub Personal Access Token with the following permissions:
-- `repo` (Full control of private repositories)
-- `workflow` (Update GitHub Action workflows)
+```python
+from src import WorkflowManager, WorkflowConfig
+
+# Create configuration
+config = WorkflowConfig(
+    max_file_lines=300,
+    max_function_lines=40,
+    test_coverage_target=0.75,
+    autonomy_level="supervised"
+)
+
+# Initialize workflow manager
+manager = WorkflowManager(
+    github_token="your_github_token",
+    owner="your_username",
+    repo="your_repository",
+    workspace_path="./workspace",
+    config=config
+)
+```
+
+### 3. GitHub Token Setup
+
+Create a GitHub Personal Access Token with these permissions:
+- `repo` - Repository access
+- `issues` - Issue management
+- `metadata` - Repository metadata
 
 ```bash
 export GITHUB_TOKEN="ghp_your_token_here"
 ```
 
-### 3. Initialize Repository
-
-```bash
-# For existing repository
-autonomy-mcp init --owner myorg --repo myproject
-
-# For new project with template
-autonomy-mcp init --owner myorg --repo myproject --template api
-```
-
-### 4. Process Issues
-
-```bash
-# Process all ready issues
-autonomy-mcp process --owner myorg --repo myproject
-
-# Process specific issue
-autonomy-mcp process --owner myorg --repo myproject --issue 42
+Or set it directly in your code:
+```python
+import os
+github_token = os.getenv('GITHUB_TOKEN')
 ```
 
 ## Configuration
 
-### Basic Configuration
+### WorkflowConfig Options
 
 ```python
-from autonomy_mcp import WorkflowConfig
+from src import WorkflowConfig
 
 config = WorkflowConfig(
-    # Code quality constraints
-    max_file_lines=300,
-    max_function_lines=40,
-    max_pr_lines=500,
+    # Quality constraints
+    max_file_lines=300,           # Maximum lines per file
+    max_function_lines=40,        # Maximum lines per function
+    test_coverage_target=0.75,    # Target test coverage (75%)
     
-    # Testing requirements
-    test_coverage_target=0.75,
-    require_integration_tests=True,
+    # Workflow behavior
+    autonomy_level="supervised",  # supervised | semi-autonomous | autonomous
+    require_human_approval=True,  # Require approval for actions
     
-    # Autonomy level
-    autonomy_level="supervised"  # supervised | semi-autonomous | autonomous
+    # Agent configuration
+    pm_agent_model="gpt-4",      # PM agent model
+    sde_agent_model="gpt-4",     # SDE agent model
+    qa_agent_model="gpt-4",      # QA agent model
+    agent_temperature=0.1        # Temperature for AI responses
 )
 ```
 
-### Advanced Configuration
+### Autonomy Levels
+
+**Supervised (Default)**
+- Human approval required for all phases
+- Maximum safety and control
+- Best for getting started
+
+**Semi-Autonomous**
+- Automatic PM and SDE phases
+- Human approval for QA and final steps
+- Balanced automation
+
+**Autonomous**
+- Full automation with monitoring
+- Human oversight optional
+- Maximum efficiency
+
+## Basic Usage
+
+### Processing Issues
 
 ```python
-config = WorkflowConfig(
-    # Agent models
-    pm_agent_model="gpt-4",
-    sde_agent_model="claude-3-sonnet",
-    qa_agent_model="gpt-4",
-    
-    # Workflow settings
-    require_human_approval=True,
-    auto_merge_on_approval=False,
-    max_concurrent_issues=3,
-    
-    # Documentation requirements
-    require_prd=True,
-    require_tech_doc=True,
-    require_test_plan=True,
-    
-    # Branch protection
-    enable_branch_protection=True,
-    required_status_checks=["ci", "tests", "lint"]
-)
-```
+from src import WorkflowManager
 
-## Repository Setup
-
-### Automatic Setup
-
-```python
-from autonomy_mcp import quick_setup
-
-# Quick setup with defaults
-manager = quick_setup(
-    github_token="ghp_...",
-    owner="myorg",
-    repo="myproject",
-    template="api"
-)
-```
-
-### Manual Setup
-
-```python
-from autonomy_mcp import WorkflowManager, WorkflowConfig
-
-config = WorkflowConfig(autonomy_level="supervised")
+# Initialize manager
 manager = WorkflowManager(
-    github_token="ghp_...",
-    owner="myorg",
-    repo="myproject",
+    github_token="your_token",
+    owner="username",
+    repo="repository",
     config=config
 )
 
-# Setup repository structure
-manager.setup_repository()
-
-# Create labels and milestones
-manager.setup_labels()
-manager.setup_milestones()
-```
-
-## Issue Processing
-
-### Process Single Issue
-
-```python
-from autonomy_mcp import WorkflowManager
-
-manager = WorkflowManager(...)
-
-# Process issue through complete Generate-Verify loop
+# Process a single issue
 result = manager.process_issue(issue_number=42)
+print(f"Issue {result.issue_number} processed: {result.status}")
 
-print(f"Issue {result.issue_number} processed")
-print(f"Status: {result.status}")
-print(f"Phase: {result.current_phase}")
+# Process multiple issues
+issue_numbers = [1, 2, 3]
+for issue_num in issue_numbers:
+    result = manager.process_issue(issue_number=issue_num)
+    print(f"Issue #{issue_num}: {result.status}")
 ```
 
-### Process Multiple Issues
+### Working with Agents
 
 ```python
-# Process all ready issues
-results = manager.process_ready_issues()
+from src.core.agents import PMAgent, SDEAgent, QAAgent
 
-for result in results:
-    print(f"Issue #{result.issue_number}: {result.status}")
+# Create agents
+pm_agent = PMAgent(config)
+sde_agent = SDEAgent(config)
+qa_agent = QAAgent(config)
+
+# Get system prompts
+print("PM Agent Prompt:", pm_agent.get_system_prompt())
+print("SDE Agent Prompt:", sde_agent.get_system_prompt())
+print("QA Agent Prompt:", qa_agent.get_system_prompt())
 ```
 
-### Phase-Specific Processing
+## Project Templates
+
+### Using Plan Manager
 
 ```python
-# Run only PM phase
-result = manager.process_issue(issue_number=42, phase="pm")
+from src.planning import PlanManager
 
-# Run SDE phase
-result = manager.process_issue(issue_number=42, phase="sde")
+# Create plan manager
+plan_manager = PlanManager()
 
-# Run QA phase
-result = manager.process_issue(issue_number=42, phase="qa")
-```
+# Create different template types
+basic_plan = plan_manager.create_plan_template("basic")
+api_plan = plan_manager.create_plan_template("api")
+web_plan = plan_manager.create_plan_template("web")
+cli_plan = plan_manager.create_plan_template("cli")
 
-## Agent Customization
+# Save plan to file
+plan_manager.save_plan(api_plan, "my_api_plan.json")
 
-### Custom Agent Prompts
+# Load plan from file
+loaded_plan = plan_manager.load_plan("my_api_plan.json")
 
-```python
-from autonomy_mcp.core.agents import PMAgent
-
-class CustomPMAgent(PMAgent):
-    def __init__(self, config):
-        super().__init__(config)
-        self.system_prompt = """
-        You are a specialized PM agent for fintech applications.
-        Focus on regulatory compliance and security requirements.
-        
-        Always consider:
-        - PCI DSS compliance
-        - GDPR requirements
-        - Financial regulations
-        - Security best practices
-        """
-
-# Use custom agent
-manager.pm_agent = CustomPMAgent(config)
-```
-
-### Agent Configuration
-
-```python
-from autonomy_mcp import WorkflowConfig
-
-config = WorkflowConfig(
-    # Model selection
-    pm_agent_model="gpt-4",
-    sde_agent_model="claude-3-sonnet",
-    qa_agent_model="gpt-4",
-    
-    # Agent behavior
-    agent_temperature=0.1,
-    agent_max_tokens=4000,
-    agent_timeout=300
-)
-```
-
-## Templates
-
-### Using Built-in Templates
-
-```python
-from autonomy_mcp.planning import PlanManager
-
-manager = PlanManager()
-
-# Available templates: basic, api, web, cli
-plan = manager.create_plan_template("api")
-
-# Save template
-manager.save_plan(plan, "my_api_plan.json")
+# Validate plan
+errors = plan_manager.validate_plan(loaded_plan)
+if errors:
+    print("Plan validation errors:", errors)
+else:
+    print("Plan is valid!")
 ```
 
 ### Custom Templates
 
 ```python
-from autonomy_mcp.planning.plan_manager import TaskPlan
-
-custom_plan = TaskPlan(
-    name="ML Pipeline Project",
-    description="Machine learning pipeline with MLOps",
-    milestones=[
-        {
-            "title": "Data Pipeline",
-            "description": "Data ingestion and preprocessing",
-            "due_date": None,
-            "state": "open"
+# Create custom plan structure
+custom_plan = {
+    "metadata": {
+        "name": "My Custom Project",
+        "description": "A custom project template",
+        "template_type": "custom",
+        "version": "1.0"
+    },
+    "phases": {
+        "pm": {
+            "tasks": [
+                "Define user requirements",
+                "Create system architecture",
+                "Design data models"
+            ]
         },
-        {
-            "title": "Model Training",
-            "description": "ML model development and training",
-            "due_date": None,
-            "state": "open"
+        "sde": {
+            "tasks": [
+                "Implement core functionality",
+                "Create unit tests",
+                "Update documentation"
+            ]
+        },
+        "qa": {
+            "tasks": [
+                "Create integration tests",
+                "Perform quality review",
+                "Validate test coverage"
+            ]
         }
-    ],
-    issues=[
-        {
-            "title": "Data Ingestion Setup",
-            "body": "Set up data ingestion from various sources",
-            "labels": ["epic", "pm-agent"],
-            "milestone": "Data Pipeline",
-            "story_points": 8
-        }
-    ]
+    }
+}
+
+# Save and use custom plan
+plan_manager.save_plan(custom_plan, "custom_template.json")
+```
+
+## GitHub Integration
+
+### Issue Management
+
+```python
+from src.github.issue_manager import IssueManager
+
+# Create issue manager
+issue_manager = IssueManager(
+    github_token="your_token",
+    owner="username",
+    repo="repository"
+)
+
+# Create issue with labels
+issue = issue_manager.create_issue(
+    title="Implement user authentication",
+    body="Add login/logout functionality with JWT tokens",
+    labels=["feature", "authentication", "pm-agent"]
+)
+
+# Update issue
+issue_manager.update_issue(
+    issue_number=issue["number"],
+    labels=["feature", "authentication", "sde-agent"],
+    state="open"
+)
+
+# Add comment to issue
+issue_manager.add_comment(
+    issue_number=issue["number"],
+    body="Starting SDE phase - implementing authentication system"
 )
 ```
 
-## GitHub Actions Integration
+### Working with Labels
 
-### Basic Workflow
-
-```yaml
-name: Autonomy Generate-Verify Loop
-
-on:
-  issues:
-    types: [opened, labeled, assigned]
-  issue_comment:
-    types: [created]
-
-jobs:
-  process-issue:
-    runs-on: ubuntu-latest
-    if: contains(github.event.issue.labels.*.name, 'needs-requirements') || 
-        contains(github.event.issue.labels.*.name, 'needs-development') ||
-        contains(github.event.issue.labels.*.name, 'needs-testing')
+```python
+# Setup standard labels for workflow
+standard_labels = [
+    # Issue types
+    {"name": "feature", "color": "84b6eb", "description": "New feature request"},
+    {"name": "bug", "color": "d73a4a", "description": "Bug report"},
+    {"name": "task", "color": "bfd4f2", "description": "General task"},
     
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-      
-      - name: Install Autonomy MCP
-        run: pip install autonomy-mcp
-      
-      - name: Process Issue
-        run: |
-          autonomy-mcp process \
-            --owner ${{ github.repository_owner }} \
-            --repo ${{ github.event.repository.name }} \
-            --issue ${{ github.event.issue.number }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
-
-### Advanced Workflow with Matrix
-
-```yaml
-name: Autonomy Multi-Agent Processing
-
-on:
-  workflow_dispatch:
-    inputs:
-      issue_numbers:
-        description: 'Comma-separated issue numbers'
-        required: true
-
-jobs:
-  process-issues:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        issue: ${{ fromJson(github.event.inputs.issue_numbers) }}
+    # Agent roles
+    {"name": "pm-agent", "color": "1d76db", "description": "Product Manager agent"},
+    {"name": "sde-agent", "color": "0e8a16", "description": "Software Engineer agent"},
+    {"name": "qa-agent", "color": "fbca04", "description": "Quality Assurance agent"},
     
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Process Issue ${{ matrix.issue }}
-        run: |
-          autonomy-mcp process \
-            --owner ${{ github.repository_owner }} \
-            --repo ${{ github.event.repository.name }} \
-            --issue ${{ matrix.issue }} \
-            --config config/autonomy.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
+    # Workflow states
+    {"name": "needs-requirements", "color": "ff7619", "description": "Needs requirements"},
+    {"name": "in-development", "color": "0075ca", "description": "In development"},
+    {"name": "needs-testing", "color": "f9d0c4", "description": "Needs testing"},
+    {"name": "approved", "color": "0e8a16", "description": "Approved and ready"}
+]
 
-## CLI Usage
-
-### Basic Commands
-
-```bash
-# Initialize repository
-autonomy-mcp init --owner myorg --repo myproject
-
-# Process issues
-autonomy-mcp process --owner myorg --repo myproject
-
-# Check status
-autonomy-mcp status --owner myorg --repo myproject
-
-# Setup with custom config
-autonomy-mcp init --owner myorg --repo myproject --config my-config.json
-```
-
-### Advanced CLI Usage
-
-```bash
-# Process specific phase only
-autonomy-mcp process --owner myorg --repo myproject --issue 42 --phase pm
-
-# Process with custom workspace
-autonomy-mcp process --owner myorg --repo myproject --workspace /path/to/workspace
-
-# Dry run mode
-autonomy-mcp process --owner myorg --repo myproject --dry-run
-
-# Verbose output
-autonomy-mcp process --owner myorg --repo myproject --verbose
-
-# Process multiple issues
-autonomy-mcp process --owner myorg --repo myproject --issues 42,43,44
+# Create labels in repository
+for label in standard_labels:
+    try:
+        issue_manager.create_label(
+            name=label["name"],
+            color=label["color"],
+            description=label["description"]
+        )
+        print(f"Created label: {label['name']}")
+    except Exception as e:
+        print(f"Label {label['name']} might already exist: {e}")
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### 1. GitHub API Rate Limits
-
+**Import Errors**
 ```python
-from autonomy_mcp import WorkflowConfig
-
-config = WorkflowConfig(
-    github_api_delay=1.0,  # Add delay between API calls
-    max_retries=3,         # Retry failed requests
-    backoff_factor=2       # Exponential backoff
-)
+# If you get import errors, ensure package is installed correctly
+try:
+    from src import WorkflowManager, WorkflowConfig
+    print("✅ Package imported successfully")
+except ImportError as e:
+    print(f"❌ Import error: {e}")
+    print("Try: pip install -e . from the package directory")
 ```
 
-#### 2. Agent Timeouts
-
+**GitHub API Errors**
 ```python
-config = WorkflowConfig(
-    agent_timeout=600,     # Increase timeout to 10 minutes
-    agent_max_tokens=8000  # Increase token limit
-)
+# Handle GitHub API rate limiting and errors
+try:
+    result = manager.process_issue(42)
+except Exception as e:
+    if "rate limit" in str(e).lower():
+        print("GitHub API rate limit exceeded. Wait and try again.")
+    elif "not found" in str(e).lower():
+        print("Repository or issue not found. Check your configuration.")
+    else:
+        print(f"GitHub API error: {e}")
 ```
 
-#### 3. Branch Protection Issues
-
-```bash
-# Check branch protection status
-autonomy-mcp status --owner myorg --repo myproject --check-protection
-
-# Fix protection rules
-autonomy-mcp init --owner myorg --repo myproject --fix-protection
+**Configuration Issues**
+```python
+# Validate configuration before use
+config = WorkflowConfig()
+try:
+    is_valid = config.validate()
+    if is_valid:
+        print("✅ Configuration is valid")
+    else:
+        print("❌ Configuration validation failed")
+except Exception as e:
+    print(f"Configuration error: {e}")
 ```
 
 ### Debug Mode
 
 ```python
+# Enable detailed logging for debugging
 import logging
-from autonomy_mcp import WorkflowManager
-
-# Enable debug logging
 logging.basicConfig(level=logging.DEBUG)
 
-manager = WorkflowManager(...)
-result = manager.process_issue(42)
+# This will show detailed information about API calls and workflow steps
+manager = WorkflowManager(
+    github_token="your_token",
+    owner="username", 
+    repo="repository",
+    config=config
+)
 ```
 
-### Environment Variables
+### Testing Configuration
 
-```bash
-# Required
-export GITHUB_TOKEN="ghp_..."
+```python
+# Test your setup with a simple configuration check
+def test_setup():
+    try:
+        # Test imports
+        from src import WorkflowManager, WorkflowConfig
+        print("✅ Imports successful")
+        
+        # Test configuration
+        config = WorkflowConfig()
+        print("✅ Configuration created")
+        
+        # Test GitHub token (if available)
+        import os
+        if os.getenv('GITHUB_TOKEN'):
+            print("✅ GitHub token found in environment")
+        else:
+            print("⚠️  GitHub token not found in environment")
+            
+        return True
+    except Exception as e:
+        print(f"❌ Setup test failed: {e}")
+        return False
 
-# Optional
-export AUTONOMY_LOG_LEVEL="DEBUG"
-export AUTONOMY_WORKSPACE="/path/to/workspace"
-export AUTONOMY_CONFIG_FILE="/path/to/config.json"
-
-# Agent API keys (if using external LLMs)
-export OPENAI_API_KEY="sk-..."
-export ANTHROPIC_API_KEY="sk-..."
+# Run test
+if test_setup():
+    print("🎉 Setup is ready!")
+else:
+    print("🔧 Setup needs attention")
 ```
 
 ## Best Practices
 
-### 1. Repository Structure
+1. **Start Simple**: Begin with supervised mode and basic configuration
+2. **Test Locally**: Validate configuration and GitHub access before processing issues
+3. **Use Templates**: Leverage existing templates rather than creating from scratch
+4. **Monitor Progress**: Check issue comments and labels to track workflow progress
+5. **Human Review**: Always review AI-generated content before approval
+6. **Incremental Adoption**: Start with small issues to build confidence
 
-```
-project/
-├── docs/
-│   ├── PRD.md           # Product Requirements
-│   ├── TECH.md          # Technical Design
-│   └── TEST.md          # Test Plan
-├── src/
-│   └── ...              # Source code
-├── tests/
-│   └── ...              # Test files
-├── .github/
-│   └── workflows/       # GitHub Actions
-└── autonomy.json        # Autonomy config
-```
+## Getting Help
 
-### 2. Issue Templates
-
-Create issue templates in `.github/ISSUE_TEMPLATE/`:
-
-```markdown
----
-name: Feature Request
-about: Request a new feature
-title: '[FEATURE] '
-labels: ['feature', 'needs-requirements']
-assignees: ''
----
-
-## Feature Description
-Brief description of the feature
-
-## Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-
-## Story Points
-Estimated effort (1-13)
-
-## Agent Assignment
-- [ ] PM-agent for requirements
-- [ ] SDE-agent for implementation  
-- [ ] QA-agent for testing
-```
-
-### 3. Configuration Management
-
-```json
-{
-  "max_file_lines": 300,
-  "max_function_lines": 40,
-  "test_coverage_target": 0.8,
-  "autonomy_level": "supervised",
-  "require_human_approval": true,
-  "pm_agent_model": "gpt-4",
-  "sde_agent_model": "claude-3-sonnet",
-  "qa_agent_model": "gpt-4"
-}
-```
-
-## Integration Examples
-
-### With Existing CI/CD
-
-```yaml
-# Integrate with existing workflow
-- name: Run Autonomy Processing
-  if: contains(github.event.issue.labels.*.name, 'auto-process')
-  run: |
-    autonomy-mcp process \
-      --owner ${{ github.repository_owner }} \
-      --repo ${{ github.event.repository.name }} \
-      --issue ${{ github.event.issue.number }}
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-- name: Run Tests
-  run: npm test
-
-- name: Deploy
-  if: success()
-  run: npm run deploy
-```
-
-### With Project Management Tools
-
-```python
-# Sync with Jira/Linear
-from autonomy_mcp import WorkflowManager
-
-class JiraIntegratedManager(WorkflowManager):
-    def process_issue(self, issue_number):
-        result = super().process_issue(issue_number)
-        
-        # Sync with Jira
-        self.sync_to_jira(issue_number, result)
-        
-        return result
-```
-
-This usage guide covers the most common scenarios. For more advanced use cases, see the [API Reference](API.md) and [Examples](../examples/).
+- **Issues**: Report bugs at https://github.com/mehulbhardwaj/autonomous-mcp/issues
+- **Documentation**: Check the docs/ directory for additional information
+- **Examples**: See examples/ directory for practical usage patterns
