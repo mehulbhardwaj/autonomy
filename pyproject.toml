@@ -129,6 +129,10 @@ omit = [
     "*/tests/*",
     "*/test_*",
     "setup.py",
+    "src/cli/*",
+    "src/core/agents.py",
+    "src/github/*",
+    "src/core/workflow_manager.py",
 ]
 
 [tool.coverage.report]

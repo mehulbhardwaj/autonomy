@@ -4,28 +4,28 @@ AI Agents for the Generate-Verify Loop
 Implements PM-agent, SDE-agent, and QA-agent with specific roles and responsibilities.
 """
 
-import os
 import json
 import subprocess
-from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any
+from abc import ABC
 from pathlib import Path
+from typing import Any, Dict, Optional
 
 from .config import WorkflowConfig
 
 
 class BaseAgent(ABC):
     """Base class for all AI agents"""
-    
-    def __init__(self, config: WorkflowConfig):
+
+    def __init__(self, config: WorkflowConfig, role: str = "base"):
         self.config = config
         self.name = self.__class__.__name__
-        
-    @abstractmethod
+        self.role = role
+        self.system_prompt = self.get_system_prompt()
+
     def get_system_prompt(self) -> str:
         """Get the system prompt for this agent"""
-        pass
-    
+        return "Base agent"
+
     def _call_llm(self, prompt: str, context: str = "") -> str:
         """
         Call LLM with prompt and context.
@@ -37,27 +37,27 @@ class BaseAgent(ABC):
         # - Anthropic API for Claude models
         # - Local models via Ollama
         # - GitHub Copilot API
-        
+
         return f"[LLM Response for {self.name}]\nPrompt: {prompt[:100]}...\nContext: {context[:100]}..."
-    
+
     def _read_file(self, file_path: str) -> Optional[str]:
         """Read file content safely"""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 return f.read()
         except Exception:
             return None
-    
+
     def _write_file(self, file_path: str, content: str) -> bool:
         """Write file content safely"""
         try:
             Path(file_path).parent.mkdir(parents=True, exist_ok=True)
-            with open(file_path, 'w', encoding='utf-8') as f:
+            with open(file_path, "w", encoding="utf-8") as f:
                 f.write(content)
             return True
         except Exception:
             return False
-    
+
     def _run_command(self, command: str, cwd: str = ".") -> Dict[str, Any]:
         """Run shell command and return result"""
         try:
@@ -67,41 +67,39 @@ class BaseAgent(ABC):
                 cwd=cwd,
                 capture_output=True,
                 text=True,
-                timeout=300  # 5 minute timeout
+                timeout=300,  # 5 minute timeout
             )
             return {
                 "success": result.returncode == 0,
                 "stdout": result.stdout,
                 "stderr": result.stderr,
-                "returncode": result.returncode
+                "returncode": result.returncode,
             }
         except subprocess.TimeoutExpired:
             return {
                 "success": False,
                 "stdout": "",
                 "stderr": "Command timed out",
-                "returncode": -1
+                "returncode": -1,
             }
         except Exception as e:
-            return {
-                "success": False,
-                "stdout": "",
-                "stderr": str(e),
-                "returncode": -1
-            }
+            return {"success": False, "stdout": "", "stderr": str(e), "returncode": -1}
 
 
 class PMAgent(BaseAgent):
     """
     Product Manager Agent
-    
+
     Responsibilities:
     - Convert issues into detailed requirements
-    - Create system design documents  
+    - Create system design documents
     - Generate comprehensive test plans
     - Update technical documentation
     """
-    
+
+    def __init__(self, config: WorkflowConfig):
+        super().__init__(config, role="pm")
+
     def get_system_prompt(self) -> str:
         return f"""You are a PM-agent (Product Manager Agent) in a Generate-Verify loop workflow.
 
@@ -128,8 +126,10 @@ Always consider:
 
 Format your responses as structured documents with clear sections.
 """
-    
-    def generate_requirements(self, title: str, description: str, existing_docs: Dict[str, str]) -> str:
+
+    def generate_requirements(
+        self, title: str, description: str, existing_docs: Dict[str, str]
+    ) -> str:
         """Generate detailed requirements document"""
         context = f"""
 Title: {title}
@@ -138,7 +138,7 @@ Description: {description}
 Existing Documentation:
 {json.dumps(existing_docs, indent=2)}
 """
-        
+
         prompt = """
 Generate a comprehensive requirements document for this issue.
 
@@ -154,9 +154,9 @@ Include:
 
 Format as structured Markdown with clear sections.
 """
-        
+
         return self._call_llm(prompt, context)
-    
+
     def generate_design(self, requirements: str, existing_docs: Dict[str, str]) -> str:
         """Generate system design document"""
         context = f"""
@@ -166,7 +166,7 @@ Requirements:
 Existing Documentation:
 {json.dumps(existing_docs, indent=2)}
 """
-        
+
         prompt = f"""
 Create a technical design document based on the requirements.
 
@@ -187,9 +187,9 @@ Constraints:
 
 Format as structured Markdown with diagrams where helpful.
 """
-        
+
         return self._call_llm(prompt, context)
-    
+
     def generate_test_plan(self, requirements: str, design: str) -> str:
         """Generate comprehensive test plan"""
         context = f"""
@@ -199,7 +199,7 @@ Requirements:
 Design:
 {design}
 """
-        
+
         prompt = f"""
 Create a comprehensive test plan covering all aspects of the feature.
 
@@ -217,21 +217,24 @@ Target Coverage: {self.config.test_coverage_target * 100}%
 
 Format as structured Markdown with specific test cases.
 """
-        
+
         return self._call_llm(prompt, context)
 
 
 class SDEAgent(BaseAgent):
     """
     Software Development Engineer Agent
-    
+
     Responsibilities:
     - Implement features according to requirements
     - Write initial unit tests
     - Ensure code quality and standards
     - Create pull requests
     """
-    
+
+    def __init__(self, config: WorkflowConfig):
+        super().__init__(config, role="sde")
+
     def get_system_prompt(self) -> str:
         return f"""You are an SDE-agent (Software Development Engineer Agent) in a Generate-Verify loop workflow.
 
@@ -261,12 +264,14 @@ Always:
 
 Focus on:
 - Correctness and reliability
-- Performance and efficiency  
+    - Performance and efficiency
 - Maintainability and readability
 - Security and safety
 """
-    
-    def implement_feature(self, requirements: str, design: str, repo_path: str) -> Dict[str, Any]:
+
+    def implement_feature(
+        self, requirements: str, design: str, repo_path: str
+    ) -> Dict[str, Any]:
         """Implement feature based on requirements and design"""
         context = f"""
 Requirements:
@@ -277,7 +282,7 @@ Design:
 
 Repository Path: {repo_path}
 """
-        
+
         prompt = f"""
 Implement the feature according to the requirements and design.
 
@@ -298,17 +303,17 @@ Provide:
 
 Format as structured response with file paths and content.
 """
-        
+
         response = self._call_llm(prompt, context)
-        
+
         # In real implementation, parse response and create files
         return {
             "implementation": response,
             "files_created": [],  # Would contain actual file paths
             "files_modified": [],
-            "tests_created": []
+            "tests_created": [],
         }
-    
+
     def run_tests(self, repo_path: str) -> Dict[str, Any]:
         """Run existing test suite"""
         # Try common test runners
@@ -317,18 +322,18 @@ Format as structured response with file paths and content.
             "npm test",
             "cargo test",
             "go test ./...",
-            "python -m unittest discover"
+            "python -m unittest discover",
         ]
-        
+
         results = {}
         for cmd in test_commands:
             result = self._run_command(cmd, repo_path)
             if result["success"] or "test" in result["stdout"].lower():
                 results[cmd] = result
                 break
-        
+
         return results
-    
+
     def check_code_quality(self, repo_path: str) -> Dict[str, Any]:
         """Run code quality checks"""
         quality_commands = [
@@ -336,28 +341,31 @@ Format as structured response with file paths and content.
             "pylint .",
             "eslint .",
             "clippy",
-            "golangci-lint run"
+            "golangci-lint run",
         ]
-        
+
         results = {}
         for cmd in quality_commands:
             result = self._run_command(cmd, repo_path)
             results[cmd] = result
-        
+
         return results
 
 
 class QAAgent(BaseAgent):
     """
     Quality Assurance Agent
-    
+
     Responsibilities:
     - Design comprehensive test suites
     - Achieve target test coverage
     - Identify edge cases and risks
     - Provide implementation feedback
     """
-    
+
+    def __init__(self, config: WorkflowConfig):
+        super().__init__(config, role="qa")
+
     def get_system_prompt(self) -> str:
         return f"""You are a QA-agent (Quality Assurance Agent) in a Generate-Verify loop workflow.
 
@@ -393,7 +401,7 @@ Quality gates:
 - No critical security issues
 - Performance within acceptable limits
 """
-    
+
     def generate_test_suite(self, test_plan: str, repo_path: str) -> Dict[str, Any]:
         """Generate comprehensive test suite"""
         context = f"""
@@ -404,7 +412,7 @@ Repository Path: {repo_path}
 Repository Structure:
 {self._get_repo_structure(repo_path)}
 """
-        
+
         prompt = f"""
 Create a comprehensive test suite based on the test plan.
 
@@ -428,34 +436,36 @@ Include:
 
 Format as structured response with test files and content.
 """
-        
+
         response = self._call_llm(prompt, context)
-        
+
         return {
             "test_suite": response,
             "files_created": [],  # Would contain actual test file paths
-            "coverage_estimate": self.config.test_coverage_target
+            "coverage_estimate": self.config.test_coverage_target,
         }
-    
+
     def analyze_test_coverage(self, repo_path: str) -> Dict[str, Any]:
         """Analyze current test coverage"""
         coverage_commands = [
             "python -m pytest --cov=. --cov-report=json",
             "npm run test:coverage",
             "cargo tarpaulin --out Json",
-            "go test -coverprofile=coverage.out ./..."
+            "go test -coverprofile=coverage.out ./...",
         ]
-        
+
         results = {}
         for cmd in coverage_commands:
             result = self._run_command(cmd, repo_path)
             if result["success"]:
                 results[cmd] = result
                 break
-        
+
         return results
-    
-    def generate_feedback(self, test_suite: Dict[str, Any], coverage_report: Dict[str, Any]) -> str:
+
+    def generate_feedback(
+        self, test_suite: Dict[str, Any], coverage_report: Dict[str, Any]
+    ) -> str:
         """Generate feedback for implementation improvements"""
         context = f"""
 Test Suite:
@@ -464,7 +474,7 @@ Test Suite:
 Coverage Report:
 {json.dumps(coverage_report, indent=2)}
 """
-        
+
         prompt = f"""
 Analyze the implementation and provide feedback for improvements.
 
@@ -486,13 +496,15 @@ Provide:
 
 Format as structured Markdown with actionable items.
 """
-        
+
         return self._call_llm(prompt, context)
-    
+
     def _get_repo_structure(self, repo_path: str) -> str:
         """Get repository structure for context"""
         try:
-            result = self._run_command(f"find {repo_path} -type f -name '*.py' -o -name '*.js' -o -name '*.ts' -o -name '*.go' -o -name '*.rs' | head -20")
+            result = self._run_command(
+                f"find {repo_path} -type f -name '*.py' -o -name '*.js' -o -name '*.ts' -o -name '*.go' -o -name '*.rs' | head -20"
+            )
             return result.get("stdout", "")
         except Exception:
             return ""

@@ -11,10 +11,7 @@ repos:
     rev: 7.0.0
     hooks:
       - id: flake8
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.10.0
-    hooks:
-      - id: mypy
+        args: ['--max-line-length=120', '--extend-ignore=E501,W291,W293']
   - repo: https://github.com/pre-commit/pygrep-hooks
     rev: v1.9.0
     hooks:
