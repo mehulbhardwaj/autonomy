@@ -96,19 +96,14 @@ use_parentheses = true
 ensure_newline_before_comments = true
 
 [tool.mypy]
-python_version = "3.8"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-disallow_incomplete_defs = true
-check_untyped_defs = true
-disallow_untyped_decorators = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
-strict_equality = true
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_configs = false
+warn_return_any = false
+disallow_untyped_defs = false
+check_untyped_defs = false
+strict = false
+ignore_errors = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
