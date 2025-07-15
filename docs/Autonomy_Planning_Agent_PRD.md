@@ -38,7 +38,7 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 
 ---
 
-## 5. Goals & Objectives
+## 4. Goals & Objectives
 
 | Goal ID | Category  | Description | KPI Anchor |
 | ------- | --------- | ----------- | ---------- |
@@ -51,7 +51,7 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 ---
 
 
-## 6. Market Hypotheses
+## 5. Market Hypotheses
 | # | Hypothesis | Validation Metric | Risk if False |
 |---|------------|------------------|---------------|
 | **H1** | Builders will let an agent pick & update their next task if it saves ≥ 30 min/week. | Flow-interruption survey | Core value weak; pivot required |
@@ -65,7 +65,7 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 
 ---
 
-## 7. Licensing & Distribution Strategy
+## 6. Licensing & Distribution Strategy
 
 | Layer                                             | License                               | Rationale                                                      |
 | ------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------- |
@@ -77,7 +77,7 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 
 ---
 
-## 8. Success Metrics (v1 targets)
+## 7. Success Metrics (v1 targets)
 
 | KPI                                       | Target                  | How Measured         |
 | ----------------------------------------- | ----------------------- | -------------------- |
@@ -89,7 +89,7 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 
 ---
 
-## 9. Phased Roadmap & Scope
+## 8. Phased Roadmap & Scope
 
 ### Phase 0 – Foundations (Weeks 0-2)
 **Deliverables**
@@ -97,7 +97,7 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 - Secret vault & PAT scopes  
 - CLI scaffold (`autonomy auth`, `whoami`)
 
-**Exit Criteria:** CLI authenticates and returns GitHub username.
+**Definition of Done:** CLI authenticates and returns GitHub username.
 
 ---
 
@@ -106,44 +106,53 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 1. `/autonomy next` & `/autonomy update` (CLI + Slack)
 - `/autonomy next [--me]` – returns highest-priority unblocked issue assigned to caller.  
 - `/autonomy update <issue> --done --notes "…"` – closes issue, rolls over incomplete subtasks.
+Definition of Done: CLI able to edit issues, return next issue
 
 2. Issue hierarchy auto-maintenance via Tasklists
 - Maintain **Epic → Feature → Task → Sub-task** using GitHub Tasklists.  
 - Auto-create parent epics if missing; warn if orphan tasks > 3.
-  
+Definition of Done: Issue metadata is captured cleanly and maintained over time. System is aware of existing tickets and works with them.
+
 3. Nightly Backlog Doctor digest  
 - Flag stale (> 14 days idle), duplicate (≥ 0.9 title/body sim.), or over-large (> 10 checklist items) issues.  
 - Post digest to `#autonomy-daily` thread.
+Definition of Done: System proactively manages issue hygiene and removes drift.
 
 4. Shadow-branch PR + one-click Undo  
 - All multi-issue edits land as PR on branch `autonomy/backlog-patch-<ts>`.  
 - Comment embeds JSON diff hash.  
 - **Undo** via `/autonomy undo <hash>` (CLI/Slack) within *N* commits window (configurable, default 5). Native integration with Github's version control system as much as possible. 
 - Undo reapplies inverse JSON patch to all touched artefacts.
+Definition of Done: Supports an ability to version control automated issue updates, using native Github capabilities.
 
-5. Learning from Reversals
-- Slack undo modal captures `reason`, `severity`, `flow_area`.  
-- Pattern miner clusters reasons nightly; if same motif ≥ 3× → propose rule.
+6. Basic metrics (time-to-task, approvals, WAU, LOCs per Assignee)
+Definition of Done: System is able to generate automated reports on a daily basis.
 
-6. Basic metrics (time-to-task, approvals, WAU)
-
-7. Security & Permissions
+8. Security & Permissions
 - MVP: PAT limited to `repo`, `issues:write`, `audit_log:read`.  
-- Production: GitHub Audit Log Streaming → customer SIEM, SSO/SAML, SCIM, ip-allow-lists.
-  
+Definition of Done: System is able to manage user access reliably. Leverage Github's native systems for MVP.
+
 **Hypotheses tested:** H1, H2, H3, H4, H5  
 **Pilot cohort:** 10 squads, 2 sprints.
 
+**Tech Stack**
+Python + FastAPI monolith for speed.
+TypeScript CLI & Slack (share GraphQL queries).
 ---
 
 ### Phase 2 – Learning & Adaptation (Month 2)
-- Reversal feedback modal & pattern miner  
-- Team-level rule suggestion engine
-- Assign tasks to relevant Agents, AI tools and Human Reviewers. Enforce the Generate-Verify loop.  
-- Pilot analytics dashboard  
+1. Reversal feedback modal & pattern miner to learn from Reversals
+- Slack undo modal captures `reason`, `severity`, `flow_area`.  
+- Pattern miner clusters reasons nightly; if same motif ≥ 3× → propose rule.
+Definition of Done: System takes in user-feedback whenever user overrides system's automated work. Is able to learn patterns for that repo, and stick with it in the future.
+2. Task priority algorithm based on global context and feedback from humans and task asignees (AI agents or Humans).
+3. Gather inputs from assignees (summarised logs during task execution, final completion comments). 
+3. Team-level rule suggestion engine
+4. Assign tasks to relevant Agents, AI tools and Human Reviewers. Enforce the Generate-Verify loop.
+5. Pilot analytics dashboard  
 
 *Goal: raise bot-edit approval ≥ 90 % via learned rules.*
-
+**Tech Stack** Extract Go gateway once webhook volume > 1 req/s per repo.
 ---
 
 ### Phase 3 – Production Hardening (Months 3-4)
@@ -151,7 +160,11 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 - GitHub Audit Stream → customer SIEM  
 - Secret & code-scanning gates on bot PRs  
 - 99.9 % uptime SLO (HA Redis + Postgres)
+- Production: GitHub Audit Log Streaming → customer SIEM, SSO/SAML, SCIM, ip-allow-lists.
 
+**Tech Stack** 
+Add Go job scheduler for Backlog Doctor and audit streaming.
+Keep Python strictly for AI/ML
 ---
 
 ### Phase 4 – Context & Insights (Month 5)
@@ -159,6 +172,8 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 - Velocity forecasting & risk heat-maps  
 - Multi-repo epic support (Projects v2 stitching)
 
+**Tech Stack** 
+Next.js web lens shares TS domain models with CLI.
 ---
 
 ### Phase 5 – Ecosystem & SDK (Month 6+)
@@ -168,7 +183,7 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 
 ---
 
-## 10. Functional Requirements (Phase-aligned)
+## 9. Functional Requirements (Phase-aligned)
 
 ### F-0 (Core)
 | ID | Function | Detail |
@@ -179,10 +194,10 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 ### F-1 (MVP Beta)
 | ID | Function | Detail |
 |----|----------|--------|
-| F-1-1 | **Task Retrieval** | `autonomy next` returns highest-priority unblocked issue + AC |
+| F-1-1 | **Task Retrieval** | `autonomy next` returns highest-priority unblocked issue + AC. Task priority assigned to each issue, evaluated nightly and through human review |
 | F-1-2 | **Status Update** | `autonomy update <id> --done --notes` rolls subtasks |
 | F-1-3 | **Hierarchy Sync** | Auto-maintain Epic → Task → Sub-task (Tasklists API) |
-| F-1-4 | **Backlog Doctor** | Nightly cron flags stale/dup/oversized, posts digest |
+| F-1-4 | **Backlog Doctor** | Nightly cron flags stale/dup/oversized, posts digest. Look at concept similarity in title + description |
 | F-1-5 | **Undo** | Shadow-branch PR, JSON diff hash, `/autonomy undo` |
 | F-1-6 | **Instrumentation** | Track latency, approvals, undo rate, WAU |
 
@@ -203,7 +218,7 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 
 ---
 
-## 11. Non-Functional Requirements (Phase 3 onwards)
+## 10. Non-Functional Requirements (Phase 3 onwards)
 | Aspect | Requirement |
 |--------|-------------|
 | **Performance** | Internal API < 300 ms; CLI round-trip p95 ≤ 3 s |
