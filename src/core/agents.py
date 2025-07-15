@@ -503,7 +503,9 @@ Format as structured Markdown with actionable items.
         """Get repository structure for context"""
         try:
             result = self._run_command(
-                f"find {repo_path} -type f -name '*.py' -o -name '*.js' -o -name '*.ts' -o -name '*.go' -o -name '*.rs' | head -20"
+                f"find {repo_path} -type f "
+                "-name '*.py' -o -name '*.js' -o -name '*.ts' "
+                "-o -name '*.go' -o -name '*.rs' | head -20"
             )
             return result.get("stdout", "")
         except Exception:
