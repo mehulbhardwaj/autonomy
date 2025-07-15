@@ -97,15 +97,15 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 - Secret vault & PAT scopes  
 - CLI scaffold (`autonomy auth`, `whoami`)
 
-**Definition of Done:** CLI authenticates and returns GitHub username.
+**Definition of Done:** CLI authenticates and returns GitHub username. Authenticates Slack. 
 
 ---
 
 ### Phase 1 – MVP Beta (Weeks 3-6) ⚑ *Pilot*
 **Features**
-1. `/autonomy next` & `/autonomy update` (CLI + Slack)
+1. `/autonomy next` & `/autonomy update` (CLI + Slack). Scoring algorithm to be determined in Phase 2. Find mechanism to write down latest ticket score (in queue).
 - `/autonomy next [--me]` – returns highest-priority unblocked issue assigned to caller.  
-- `/autonomy update <issue> --done --notes "…"` – closes issue, rolls over incomplete subtasks.
+- `/autonomy update <issue> --done --notes "…"` – closes issue, rolls over incomplete subtasks. 
 Definition of Done: CLI able to edit issues, return next issue
 
 2. Issue hierarchy auto-maintenance via Tasklists
@@ -125,10 +125,10 @@ Definition of Done: System proactively manages issue hygiene and removes drift.
 - Undo reapplies inverse JSON patch to all touched artefacts.
 Definition of Done: Supports an ability to version control automated issue updates, using native Github capabilities.
 
-6. Basic metrics (time-to-task, approvals, WAU, LOCs per Assignee)
-Definition of Done: System is able to generate automated reports on a daily basis.
+5. Basic metrics (time-to-task, approvals, WAU, LOCs per Assignee)
+Definition of Done: System is able to generate automated reports on a daily basis to communication channel (Slack).
 
-8. Security & Permissions
+6. Security & Permissions
 - MVP: PAT limited to `repo`, `issues:write`, `audit_log:read`.  
 Definition of Done: System is able to manage user access reliably. Leverage Github's native systems for MVP.
 
@@ -145,7 +145,7 @@ TypeScript CLI & Slack (share GraphQL queries).
 - Slack undo modal captures `reason`, `severity`, `flow_area`.  
 - Pattern miner clusters reasons nightly; if same motif ≥ 3× → propose rule.
 Definition of Done: System takes in user-feedback whenever user overrides system's automated work. Is able to learn patterns for that repo, and stick with it in the future.
-2. Task priority algorithm based on global context and feedback from humans and task asignees (AI agents or Humans).
+2. Determine task priority algorithm based on global context and feedback from humans and task asignees (AI agents or Humans).
 3. Gather inputs from assignees (summarised logs during task execution, final completion comments). 
 3. Team-level rule suggestion engine
 4. Assign tasks to relevant Agents, AI tools and Human Reviewers. Enforce the Generate-Verify loop.
@@ -245,3 +245,4 @@ flowchart LR
         F --> G[(Postgres + pgvector)]
         C --> H[(Audit Log Writer)]
     end
+```
