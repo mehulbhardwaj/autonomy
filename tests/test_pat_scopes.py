@@ -1,4 +1,3 @@
-
 import pytest
 
 from src.github.pat_scopes import (
