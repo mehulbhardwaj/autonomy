@@ -99,18 +99,20 @@ autonomous-mcp/
 
 ```bash
 # Clone the repository
-git clone https://github.com/mehulbhardwaj/autonomous-mcp.git
-cd autonomous-mcp
+git clone https://github.com/mehulbhardwaj/autonomy.git
+cd autonomy
 
-# Install in development mode
-pip install -e .
-
-# Install development dependencies
+# Install package and development dependencies
 pip install -e .[dev]
+
+# Install pre-commit hooks
+pre-commit install
 
 # Run tests
 pytest
 ```
+
+For more details see [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md).
 
 ### Running Tests
 
