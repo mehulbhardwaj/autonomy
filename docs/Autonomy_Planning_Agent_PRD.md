@@ -138,7 +138,8 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 
 ### Phase 2 – Learning & Adaptation (Month 2)
 - Reversal feedback modal & pattern miner  
-- Team-level rule suggestion engine  
+- Team-level rule suggestion engine
+- Assign tasks to relevant Agents, AI tools and Human Reviewers. Enforce the Generate-Verify loop.  
 - Pilot analytics dashboard  
 
 *Goal: raise bot-edit approval ≥ 90 % via learned rules.*
