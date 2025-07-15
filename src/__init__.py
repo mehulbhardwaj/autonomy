@@ -19,6 +19,7 @@ from .github import (
     validate_github_token_scopes,
 )
 from .planning.plan_manager import PlanManager
+from .slack import get_slack_auth_info
 
 __version__ = "0.1.0"
 __author__ = "Mehul Bhardwaj"
@@ -44,6 +45,7 @@ __all__ = [
     "SecretVault",
     # Version info
     "__version__",
+    "get_slack_auth_info",
 ]
 
 

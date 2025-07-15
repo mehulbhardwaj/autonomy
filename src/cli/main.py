@@ -93,8 +93,13 @@ Environment Variables:
 
     # Auth command
     auth_parser = subparsers.add_parser("auth", help="Manage authentication")
-    auth_parser.add_argument("action", choices=["login", "whoami"], help="Auth action")
+    auth_parser.add_argument(
+        "action",
+        choices=["login", "logout", "status", "github", "slack"],
+        help="Auth action",
+    )
     auth_parser.add_argument("--token", help="GitHub personal access token")
+    auth_parser.add_argument("--slack-token", help="Slack API token")
 
     args = parser.parse_args()
 
@@ -102,21 +107,25 @@ Environment Variables:
         parser.print_help()
         return 1
 
-    # Get GitHub token
+    # Initialize secret vault
     vault = SecretVault()
-    token = args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
-    if not token:
-        print(
-            "Error: GitHub token required. Use --token, set GITHUB_TOKEN, or store via 'autonomy-mcp auth login'."
-        )
-        return 1
 
-    # Validate PAT scopes
-    try:
-        validate_github_token_scopes(token, REQUIRED_GITHUB_SCOPES)
-    except Exception as e:
-        print(f"Error: {e}")
-        return 1
+    # Authentication commands do not require a token upfront
+    token = None
+    if args.command != "auth":
+        token = args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+        if not token:
+            print(
+                "Error: GitHub token required. Use --token, set GITHUB_TOKEN, or store via 'autonomy-mcp auth login'."
+            )
+            return 1
+
+        # Validate PAT scopes
+        try:
+            validate_github_token_scopes(token, REQUIRED_GITHUB_SCOPES)
+        except Exception as e:
+            print(f"Error: {e}")
+            return 1
 
     # Get workspace path
     workspace = args.workspace or os.getenv("WORKSPACE_PATH", ".")
@@ -136,18 +145,19 @@ Environment Variables:
     if not config:
         config = WorkflowConfig()
 
-    # Initialize workflow manager
-    try:
-        manager = WorkflowManager(
-            github_token=token,
-            owner=args.owner,
-            repo=args.repo,
-            workspace_path=str(workspace_path),
-            config=config,
-        )
-    except Exception as e:
-        print(f"Error initializing workflow manager: {e}")
-        return 1
+    manager = None
+    if args.command != "auth":
+        try:
+            manager = WorkflowManager(
+                github_token=token,
+                owner=args.owner,
+                repo=args.repo,
+                workspace_path=str(workspace_path),
+                config=config,
+            )
+        except Exception as e:
+            print(f"Error initializing workflow manager: {e}")
+            return 1
 
     # Execute command
     try:
@@ -263,17 +273,34 @@ def cmd_status(manager: WorkflowManager, args) -> int:
 def cmd_auth(vault: SecretVault, args) -> int:
     """Authentication commands."""
     if args.action == "login":
-        token = args.token or os.getenv("GITHUB_TOKEN")
-        if not token:
-            print("Error: GitHub token required for login")
+        gh_token = args.token or os.getenv("GITHUB_TOKEN")
+        slack_token = args.slack_token or os.getenv("SLACK_TOKEN")
+        if not gh_token and not slack_token:
+            print("Error: provide --token and/or --slack-token for login")
             return 1
-        vault.set_secret("github_token", token)
-        print("✓ Token stored in vault")
+        if gh_token:
+            vault.set_secret("github_token", gh_token)
+            print("✓ GitHub token stored in vault")
+        if slack_token:
+            vault.set_secret("slack_token", slack_token)
+            print("✓ Slack token stored in vault")
         return 0
-    if args.action == "whoami":
-        token = (
-            args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
-        )
+
+    if args.action == "logout":
+        vault.delete_secret("github_token")
+        vault.delete_secret("slack_token")
+        print("✓ Credentials removed")
+        return 0
+
+    if args.action == "status":
+        gh_token = args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+        slack_token = args.slack_token or os.getenv("SLACK_TOKEN") or vault.get_secret("slack_token")
+        print(f"GitHub: {'logged in' if gh_token else 'not logged in'}")
+        print(f"Slack: {'logged in' if slack_token else 'not logged in'}")
+        return 0
+
+    if args.action == "github":
+        token = args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
         if not token:
             print("Error: GitHub token not found")
             return 1
@@ -291,6 +318,22 @@ def cmd_auth(vault: SecretVault, args) -> int:
         except Exception as e:
             print(f"Error: {e}")
             return 1
+
+    if args.action == "slack":
+        from ..slack import get_slack_auth_info
+
+        token = args.slack_token or os.getenv("SLACK_TOKEN") or vault.get_secret("slack_token")
+        if not token:
+            print("Error: Slack token not found")
+            return 1
+        try:
+            info = get_slack_auth_info(token)
+            print(info.get("team", info.get("team_id", "unknown")))
+            return 0
+        except Exception as e:
+            print(f"Error: {e}")
+            return 1
+
     print("Unknown auth action")
     return 1
 
