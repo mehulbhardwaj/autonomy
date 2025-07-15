@@ -10,8 +10,14 @@ https://mehulbhardwaj.substack.com/p/building-software-in-english
 
 from .core.agents import BaseAgent, PMAgent, QAAgent, SDEAgent
 from .core.config import WorkflowConfig
+from .core.secret_vault import SecretVault
 from .core.workflow_manager import WorkflowManager
-from .github.issue_manager import IssueManager
+from .github import (
+    REQUIRED_GITHUB_SCOPES,
+    IssueManager,
+    get_github_token_scopes,
+    validate_github_token_scopes,
+)
 from .planning.plan_manager import PlanManager
 
 __version__ = "0.1.0"
@@ -30,8 +36,12 @@ __all__ = [
     "QAAgent",
     # GitHub integration
     "IssueManager",
+    "REQUIRED_GITHUB_SCOPES",
+    "get_github_token_scopes",
+    "validate_github_token_scopes",
     # Planning
     "PlanManager",
+    "SecretVault",
     # Version info
     "__version__",
 ]

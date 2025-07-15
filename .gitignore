@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Coverage
+.coverage
+htmlcov/
+
+# Eggs
+*.egg-info/
+
+# Local vault
+.autonomy/

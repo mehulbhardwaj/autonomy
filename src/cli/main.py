@@ -7,8 +7,12 @@ import os
 import sys
 from pathlib import Path
 
+import requests
+
 from ..core.config import WorkflowConfig
+from ..core.secret_vault import SecretVault
 from ..core.workflow_manager import WorkflowManager
+from ..github import REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
 
 
 def main():
@@ -87,6 +91,11 @@ Environment Variables:
         "--issue", type=int, help="Show status for specific issue"
     )
 
+    # Auth command
+    auth_parser = subparsers.add_parser("auth", help="Manage authentication")
+    auth_parser.add_argument("action", choices=["login", "whoami"], help="Auth action")
+    auth_parser.add_argument("--token", help="GitHub personal access token")
+
     args = parser.parse_args()
 
     if not args.command:
@@ -94,11 +103,19 @@ Environment Variables:
         return 1
 
     # Get GitHub token
-    token = args.token or os.getenv("GITHUB_TOKEN")
+    vault = SecretVault()
+    token = args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
     if not token:
         print(
-            "Error: GitHub token required. Use --token or set GITHUB_TOKEN environment variable."
+            "Error: GitHub token required. Use --token, set GITHUB_TOKEN, or store via 'autonomy-mcp auth login'."
         )
+        return 1
+
+    # Validate PAT scopes
+    try:
+        validate_github_token_scopes(token, REQUIRED_GITHUB_SCOPES)
+    except Exception as e:
+        print(f"Error: {e}")
         return 1
 
     # Get workspace path
@@ -142,6 +159,8 @@ Environment Variables:
             return cmd_init(manager, args)
         elif args.command == "status":
             return cmd_status(manager, args)
+        elif args.command == "auth":
+            return cmd_auth(vault, args)
         else:
             print(f"Unknown command: {args.command}")
             return 1
@@ -239,6 +258,41 @@ def cmd_status(manager: WorkflowManager, args) -> int:
         print("  Ready to merge: 1")
 
     return 0
+
+
+def cmd_auth(vault: SecretVault, args) -> int:
+    """Authentication commands."""
+    if args.action == "login":
+        token = args.token or os.getenv("GITHUB_TOKEN")
+        if not token:
+            print("Error: GitHub token required for login")
+            return 1
+        vault.set_secret("github_token", token)
+        print("✓ Token stored in vault")
+        return 0
+    if args.action == "whoami":
+        token = (
+            args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+        )
+        if not token:
+            print("Error: GitHub token not found")
+            return 1
+        try:
+            response = requests.get(
+                "https://api.github.com/user",
+                headers={"Authorization": f"token {token}"},
+                timeout=10,
+            )
+            if response.status_code == 200:
+                print(response.json().get("login"))
+                return 0
+            print(f"Error: {response.status_code} {response.text}")
+            return 1
+        except Exception as e:
+            print(f"Error: {e}")
+            return 1
+    print("Unknown auth action")
+    return 1
 
 
 def _create_web_template(workspace_path: Path) -> None:
