@@ -113,7 +113,9 @@ Environment Variables:
     # Authentication commands do not require a token upfront
     token = None
     if args.command != "auth":
-        token = args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+        token = (
+            args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+        )
         if not token:
             print(
                 "Error: GitHub token required. Use --token, set GITHUB_TOKEN, or store via 'autonomy-mcp auth login'."
@@ -293,14 +295,22 @@ def cmd_auth(vault: SecretVault, args) -> int:
         return 0
 
     if args.action == "status":
-        gh_token = args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
-        slack_token = args.slack_token or os.getenv("SLACK_TOKEN") or vault.get_secret("slack_token")
+        gh_token = (
+            args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+        )
+        slack_token = (
+            args.slack_token
+            or os.getenv("SLACK_TOKEN")
+            or vault.get_secret("slack_token")
+        )
         print(f"GitHub: {'logged in' if gh_token else 'not logged in'}")
         print(f"Slack: {'logged in' if slack_token else 'not logged in'}")
         return 0
 
     if args.action == "github":
-        token = args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+        token = (
+            args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+        )
         if not token:
             print("Error: GitHub token not found")
             return 1
@@ -322,7 +332,11 @@ def cmd_auth(vault: SecretVault, args) -> int:
     if args.action == "slack":
         from ..slack import get_slack_auth_info
 
-        token = args.slack_token or os.getenv("SLACK_TOKEN") or vault.get_secret("slack_token")
+        token = (
+            args.slack_token
+            or os.getenv("SLACK_TOKEN")
+            or vault.get_secret("slack_token")
+        )
         if not token:
             print("Error: Slack token not found")
             return 1
