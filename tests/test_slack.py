@@ -1,6 +1,5 @@
 import pytest
 
-import pytest
 from src.slack import get_slack_auth_info
 
 
