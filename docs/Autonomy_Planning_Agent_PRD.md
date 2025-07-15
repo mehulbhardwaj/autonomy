@@ -1,7 +1,7 @@
 # Autonomy Planning Agent – Product Requirements Document (PRD)
 
 > **Rev. 0.9 – July 15 2025**  
-> Owner: Sharma Eye Care & Opticals (Product)  
+> Owner: Mehul Bhardwaj  
 > Status: Draft for Dev hand-off
 
 ---
