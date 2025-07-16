@@ -23,6 +23,7 @@ def test_env_override(tmp_path: Path, monkeypatch):
 
 # additional tests
 
+
 def test_delete_secret(tmp_path: Path):
     vault_path = tmp_path / "vault.json"
     key_path = tmp_path / "vault.key"

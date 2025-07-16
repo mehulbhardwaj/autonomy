@@ -1,7 +1,5 @@
-from types import SimpleNamespace
 from pathlib import Path
-
-import pytest
+from types import SimpleNamespace
 
 from src.cli.main import cmd_init, cmd_process, cmd_setup, cmd_status
 
