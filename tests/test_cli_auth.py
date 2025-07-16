@@ -1,7 +1,5 @@
 from types import SimpleNamespace
 
-import pytest
-
 from src.cli.main import cmd_auth
 from src.core.secret_vault import SecretVault
 

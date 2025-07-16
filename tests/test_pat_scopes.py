@@ -33,3 +33,12 @@ def test_validate_github_token_scopes(monkeypatch):
     monkeypatch.setattr("requests.get", bad_get)
     with pytest.raises(ValueError):
         validate_github_token_scopes("token")
+
+
+def test_get_github_token_scopes_error(monkeypatch):
+    def bad_get(url: str, headers=None, timeout=10):
+        return DummyResponse(401, "")
+
+    monkeypatch.setattr("requests.get", bad_get)
+    with pytest.raises(ValueError):
+        get_github_token_scopes("token")
