@@ -7,13 +7,13 @@
 ---
 
 ## 0. Purpose & Scope
-Create an **AI-augmented planning layer on top of GitHub** that delivers the speed and clarity of Linear while letting humans *and* agents share a single backlog. This document defines goals, hypotheses, phased scope, functional and non-functional requirements, architecture, and release plan.
+Create an **AI-augmented planning layer on GitHub** that gives Linear-grade speed while letting humans *and* agents share a single backlog. Each requirement below states the **Why, How-to, and Done-when** so engineers see the business value, the API hint, and the success bar.
 
 ---
 
 ## 1. Problem Statement
 
-*Builders still lose ≈6 h/week to backlog churn, duplicate issues, and context hunting—even after adopting AI code tools.* Existing trackers either add yet another UI (Jira) or stop at painless UX but no cognition (Linear). We need an agent that **keeps the backlog healthy, tells each actor their next best task, and learns local norms—without asking teams to leave GitHub or Slack/IDE.**
+Developers still burn ≈ 6 h/week on coordination even with LLM coding tools. No planner today combines **GitHub-native trust** with **adaptive AI**. Autonomy will fill that gap.
 
 ---
 ## 2. Vision 🛰️
@@ -96,14 +96,14 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 ## 8. Phased Roadmap & Scope
 
 ### Phase 0 – Foundations (Weeks 0-2)
-**Deliverables**
-- Repo bootstrap & monorepo CI  
-- Secret vault & PAT scopes  
-- CLI scaffold (`autonomy auth`, `whoami`)
-- GitHub Projects GraphQL API bootstrap: `autonomy board init` creates Priority, Pinned, Sprint, Track fields if missing
 
-
-**Definition of Done:** CLI authenticates and returns GitHub username. Authenticates Slack. GitHub Projects v2 fields are configured. 
+| Deliverable | **Why** | **How-to** | **Done-when** |
+|-------------|---------|------------|---------------|
+| **Instant CLI bootstrap** (`pipx install autonomy`) | Cut first-run friction to < 60 s | Use GitHub **Device-Flow OAuth** (POST to `/login/device/code`) | User runs `autonomy init` and lands on authenticated shell in one command |
+| Repo & CI | Quality gates | GitHub Actions with pytest, black, mypy | All PRs auto-test with >80% coverage |
+| Secret vault | Token safety | OS keychain (macOS Keychain, Windows Credential Manager) + file fallback | No secrets in git, encrypted storage |
+| **Board bootstrap** | Consistent metadata | GraphQL `createProjectV2Field` for Priority, Pinned, Track, Sprint | Fields exist & IDs cached in `~/.autonomy/field_cache.json` |
+| **Slack Bot setup** | Team communication | Slack App OAuth + webhook endpoint | `/autonomy help` works in Slack channels | 
 
 ---
 
@@ -114,7 +114,8 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 - `/autonomy update <issue> --done --notes "…"` – closes issue, rolls over incomplete subtasks. 
 - Priority ranking based on: Priority field (P0-P3), Sprint proximity, issue age, blocked status.
 - Manual override support: "Pinned" field allows users to freeze issue position from automatic reordering.
-Definition of Done: CLI able to edit issues, return next issue with transparent priority reasoning.
+- Slack slash commands: `/autonomy next`, `/autonomy update <issue>`, `/autonomy status`
+Definition of Done: CLI able to edit issues, return next issue with transparent priority reasoning. Slack commands work in channels.
 
 2. Issue hierarchy auto-maintenance via Tasklists
 - Maintain **Epic → Feature → Task → Sub-task** using GitHub Tasklists.  
@@ -123,8 +124,8 @@ Definition of Done: Issue metadata is captured cleanly and maintained over time.
 
 3. Nightly Backlog Doctor digest  
 - Flag stale (> 14 days idle), duplicate (≥ 0.9 title/body sim.), or over-large (> 10 checklist items) issues.  
-- Post digest to `#autonomy-daily` thread.
-Definition of Done: System proactively manages issue hygiene and removes drift.
+- Post digest to `#autonomy-daily` Slack thread with actionable recommendations.
+Definition of Done: System proactively manages issue hygiene and removes drift. Slack digest posted nightly.
 
 4. Shadow-branch PR + one-click Undo  
 - All multi-issue edits land as PR on branch `autonomy/backlog-patch-<ts>`.  
@@ -134,7 +135,7 @@ Definition of Done: System proactively manages issue hygiene and removes drift.
 Definition of Done: Supports an ability to version control automated issue updates, using native Github capabilities.
 
 5. Basic metrics (time-to-task, approvals, WAU, LOCs per Assignee)
-Definition of Done: System is able to generate automated reports on a daily basis to communication channel (Slack).
+Definition of Done: System is able to generate automated reports on a daily basis to Slack communication channel with clear metrics dashboards.
 
 6. Security & Permissions
 - MVP: PAT limited to `repo`, `issues:write`, `audit_log:read`.  
@@ -200,9 +201,11 @@ Next.js web lens shares TS domain models with CLI.
 ### F-0 (Core)
 | ID | Function | Detail |
 |----|----------|--------|
-| F-0-1 | Secure PAT storage | Vault-backed, env-agnostic |
-| F-0-2 | CLI Auth | OAuth device-flow handshake |
-| F-0-3 | Board Bootstrap            | `autonomy board init` creates Priority, Pinned, Sprint, Track fields if missing; caches field IDs via GraphQL |
+| F-0-1 | Instant CLI bootstrap | `pipx install autonomy` → `autonomy init` → authenticated shell in <60s |
+| F-0-2 | Device-Flow OAuth | GitHub Device-Flow OAuth (POST to `/login/device/code`) for seamless authentication |
+| F-0-3 | OS-native secret storage | OS keychain (macOS Keychain, Windows Credential Manager) + file fallback |
+| F-0-4 | Board Bootstrap | `autonomy board init` creates Priority, Pinned, Sprint, Track fields; caches field IDs in `~/.autonomy/field_cache.json` |
+| F-0-5 | Slack Bot Setup | Slack App creation, OAuth flow, basic webhook infrastructure, workspace authentication |
 
 
 ### F-1 (MVP Beta)
@@ -213,7 +216,9 @@ Next.js web lens shares TS domain models with CLI.
 | F-1-3 | Hierarchy Sync | Auto-maintain Epic → Task → Sub-task (Tasklists API) |
 | F-1-4 | Backlog Doctor | Nightly cron flags stale/dup/oversized, posts digest. Look at concept similarity in title + description |
 | F-1-5 | Undo | Shadow-branch PR, JSON diff hash, `/autonomy undo` |
-| F-1-6 | Instrumentation | Track latency, approvals, undo rate, WAU |
+| F-1-6 | Slack Commands | `/autonomy next`, `/autonomy update <id>`, `/autonomy status` slash commands with GitHub integration |
+| F-1-7 | Slack Notifications | Nightly backlog doctor digest, metrics reports, undo confirmations posted to channels |
+| F-1-8 | Instrumentation | Track latency, approvals, undo rate, WAU |
 
 
 ### F-2 (Learning)

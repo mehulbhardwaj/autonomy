@@ -46,11 +46,14 @@
 ### Phase 0-1 Stack (Simple Start)
 | Component | Technology | Rationale |
 |-----------|------------|-----------|
+| **Distribution** | pipx + PyPI | Professional Python package distribution |
 | **CLI** | Python Click | Simple, composable commands |
 | **API** | FastAPI | Async, type hints, auto docs |
+| **GitHub Auth** | Device-Flow OAuth | Better UX than manual PAT entry |
 | **GitHub** | httpx + GraphQL | REST for simple ops, GraphQL for Projects v2 |
+| **Slack** | Slack Web API + Webhooks | Slash commands, notifications, OAuth |
 | **Config** | Local files + Pydantic | No database complexity initially |
-| **Auth** | GitHub PAT + Fernet | Secure, simple credential storage |
+| **Secrets** | OS keychain + file fallback | Native OS security, no external deps |
 | **Deployment** | Single Python process | Minimal operational overhead |
 
 ---
@@ -91,6 +94,15 @@ class RankingEngine:
     def score_task(self, task: Task, context: RankingContext) -> float
     def rank_tasks(self, tasks: List[Task]) -> List[Task]
     def explain_ranking(self, task: Task) -> str
+
+# Slack Integration - commands and notifications
+class SlackBot:
+    def __init__(self, bot_token: str):
+        self.client = SlackWebClient(token=bot_token)
+    
+    def handle_slash_command(self, command: str, args: Dict) -> SlackResponse
+    def post_notification(self, channel: str, message: str) -> bool
+    def send_interactive_message(self, channel: str, blocks: List) -> bool
 ```
 
 ### Module Organization
@@ -113,7 +125,9 @@ src/
 │   └── commands/           # Command implementations
 └── slack/
     ├── bot.py              # Slack bot implementation
-    └── handlers/           # Event handlers
+    ├── commands.py         # Slash command handlers
+    ├── notifications.py    # Notification formatting and sending
+    └── oauth.py            # Slack OAuth flow
 ```
 
 ---
@@ -157,10 +171,12 @@ class RankingConfig:
 ## 5  Incremental Evolution Path
 
 ### Phase 0: Foundation (Weeks 1-2)
-- CLI with GitHub authentication
-- Basic Projects v2 field setup
-- Simple file-based configuration
-- **Goal**: Working authentication and field bootstrap
+- **Instant CLI bootstrap**: `pipx install autonomy` → `autonomy init` → authenticated in <60s
+- **Device-Flow OAuth**: Seamless GitHub authentication without manual PAT entry
+- **OS-native secret storage**: Keychain integration with file fallback
+- **Board bootstrap**: Automated Projects v2 field setup with caching
+- **Slack Bot setup**: Basic OAuth and webhook infrastructure
+- **Goal**: Professional distribution and frictionless onboarding
 
 ### Phase 1: Core Features (Weeks 3-6)
 - Basic priority ranking system
