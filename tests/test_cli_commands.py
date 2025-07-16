@@ -1,7 +1,15 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from src.cli.main import cmd_init, cmd_process, cmd_setup, cmd_status
+from src.cli.main import (
+    cmd_init,
+    cmd_list,
+    cmd_next,
+    cmd_process,
+    cmd_setup,
+    cmd_status,
+    cmd_update,
+)
 
 
 class DummyManager:
@@ -9,6 +17,7 @@ class DummyManager:
         self.owner = "owner"
         self.repo = "repo"
         self.workspace_path = workspace
+        self.github_token = "token"
         self.setup_called = False
         self.process_issue_called_with = None
 
@@ -80,3 +89,70 @@ def test_cmd_status(tmp_path: Path):
     assert cmd_status(manager, args) == 0
     args_issue = SimpleNamespace(issue=5)
     assert cmd_status(manager, args_issue) == 0
+
+
+def test_cmd_next(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+
+    class DummyTM:
+        def get_next_task(self, assignee=None, team=None):
+            return {"number": 7, "title": "task"}
+
+    monkeypatch.setattr(
+        "src.tasks.task_manager.TaskManager", lambda *a, **kw: DummyTM()
+    )
+    args = SimpleNamespace(assignee=None, team=None)
+    assert cmd_next(manager, args) == 0
+
+
+def test_cmd_update(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+
+    class DummyTM:
+        def __init__(self):
+            self.called = None
+
+        def update_task(self, issue_number, status=None, done=False, notes=None):
+            self.called = (issue_number, status, done, notes)
+            return True
+
+    dummy = DummyTM()
+    monkeypatch.setattr("src.tasks.task_manager.TaskManager", lambda *a, **kw: dummy)
+    args = SimpleNamespace(issue=3, status="in-progress", done=False, notes=None)
+    assert cmd_update(manager, args) == 0
+    assert dummy.called == (3, "in-progress", False, None)
+
+
+def test_cmd_next_none(monkeypatch, tmp_path: Path, capsys):
+    manager = DummyManager(tmp_path)
+
+    class DummyTM:
+        def get_next_task(self, assignee=None, team=None):
+            return None
+
+    monkeypatch.setattr(
+        "src.tasks.task_manager.TaskManager", lambda *a, **kw: DummyTM()
+    )
+    args = SimpleNamespace(assignee=None, team=None)
+    assert cmd_next(manager, args) == 0
+    out = capsys.readouterr().out
+    assert "No tasks found" in out
+
+
+def test_cmd_list(monkeypatch, tmp_path: Path, capsys):
+    manager = DummyManager(tmp_path)
+
+    class DummyTM:
+        def list_tasks(self, assignee=None, team=None):
+            return [
+                {"number": 1, "title": "task a"},
+                {"number": 2, "title": "task b"},
+            ]
+
+    monkeypatch.setattr(
+        "src.tasks.task_manager.TaskManager", lambda *a, **kw: DummyTM()
+    )
+    args = SimpleNamespace(assignee=None, team=None, mine=False)
+    assert cmd_list(manager, args) == 0
+    out = capsys.readouterr().out
+    assert "#1" in out and "task a" in out

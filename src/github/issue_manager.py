@@ -225,6 +225,71 @@ class IssueManager:
             pass
         return []
 
+    def get_issue(self, issue_number: int) -> Optional[Dict[str, Any]]:
+        """Return a single issue if found."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/issues/{issue_number}", headers=self.headers
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception:
+            pass
+        return None
+
+    def update_issue_state(self, issue_number: int, state: str) -> bool:
+        """Update the state of an issue (e.g., open or closed)."""
+        try:
+            response = requests.patch(
+                f"{self.base_url}/issues/{issue_number}",
+                headers=self.headers,
+                json={"state": state},
+            )
+            return response.status_code == 200
+        except Exception:
+            return False
+
+    def update_issue_labels(
+        self,
+        issue_number: int,
+        add_labels: Optional[List[str]] = None,
+        remove_labels: Optional[List[str]] = None,
+    ) -> bool:
+        """Add and remove labels on an issue."""
+        issue = self.get_issue(issue_number)
+        if not issue:
+            return False
+        labels = [
+            label["name"] if isinstance(label, dict) and "name" in label else label
+            for label in issue.get("labels", [])
+        ]
+        if add_labels:
+            labels.extend(add_labels)
+        if remove_labels:
+            labels = [label for label in labels if label not in remove_labels]
+        labels = list(dict.fromkeys(labels))
+        try:
+            response = requests.patch(
+                f"{self.base_url}/issues/{issue_number}",
+                headers=self.headers,
+                json={"labels": labels},
+            )
+            return response.status_code == 200
+        except Exception:
+            return False
+
+    def add_comment(self, issue_number: int, comment: str) -> bool:
+        """Add a comment to an issue."""
+        try:
+            response = requests.post(
+                f"{self.base_url}/issues/{issue_number}/comments",
+                headers=self.headers,
+                json={"body": comment},
+            )
+            return response.status_code in (200, 201)
+        except Exception:
+            return False
+
     def setup_repository(self) -> None:
         """Perform basic repository bootstrap such as creating labels"""
         self.create_labels()

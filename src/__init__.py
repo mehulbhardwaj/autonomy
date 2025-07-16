@@ -20,6 +20,7 @@ from .github import (
 )
 from .planning.plan_manager import PlanManager
 from .slack import get_slack_auth_info
+from .tasks.task_manager import TaskManager
 
 __version__ = "0.1.0"
 __author__ = "Mehul Bhardwaj"
@@ -42,6 +43,7 @@ __all__ = [
     "validate_github_token_scopes",
     # Planning
     "PlanManager",
+    "TaskManager",
     "SecretVault",
     # Version info
     "__version__",
