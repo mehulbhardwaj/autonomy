@@ -100,19 +100,21 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 - Repo bootstrap & monorepo CI  
 - Secret vault & PAT scopes  
 - CLI scaffold (`autonomy auth`, `whoami`)
-- Board Bootstrap Script: `autonomy board init`: Creates field on Github Projects Graph QL API for repo  
+- GitHub Projects GraphQL API bootstrap: `autonomy board init` creates Priority, Pinned, Sprint, Track fields if missing
 
 
-**Definition of Done:** CLI authenticates and returns GitHub username. Authenticates Slack. 
+**Definition of Done:** CLI authenticates and returns GitHub username. Authenticates Slack. GitHub Projects v2 fields are configured. 
 
 ---
 
 ### Phase 1 – MVP Beta (Weeks 3-6) ⚑ *Pilot*
 **Features**
-1. `/autonomy next` & `/autonomy update` (CLI + Slack). Scoring algorithm to be determined in Phase 2. Find mechanism to write down latest ticket score (in queue).
+1. `/autonomy next` & `/autonomy update` (CLI + Slack). Basic priority ranking system using GitHub Projects v2 fields and position index.
 - `/autonomy next [--me]` – returns highest-priority unblocked issue assigned to caller.  
 - `/autonomy update <issue> --done --notes "…"` – closes issue, rolls over incomplete subtasks. 
-Definition of Done: CLI able to edit issues, return next issue
+- Priority ranking based on: Priority field (P0-P3), Sprint proximity, issue age, blocked status.
+- Manual override support: "Pinned" field allows users to freeze issue position from automatic reordering.
+Definition of Done: CLI able to edit issues, return next issue with transparent priority reasoning.
 
 2. Issue hierarchy auto-maintenance via Tasklists
 - Maintain **Epic → Feature → Task → Sub-task** using GitHub Tasklists.  
@@ -200,13 +202,13 @@ Next.js web lens shares TS domain models with CLI.
 |----|----------|--------|
 | F-0-1 | Secure PAT storage | Vault-backed, env-agnostic |
 | F-0-2 | CLI Auth | OAuth device-flow handshake |
-| F-0-3 | Board Bootstrap            | `autonomy board init` creates Priority, Pinned, Sprint, Track fields if missing; caches field IDs |
+| F-0-3 | Board Bootstrap            | `autonomy board init` creates Priority, Pinned, Sprint, Track fields if missing; caches field IDs via GraphQL |
 
 
 ### F-1 (MVP Beta)
 | ID | Function | Detail |
 |----|----------|--------|
-| F-1-1 | Task Retrieval | `autonomy next` returns highest-priority unblocked issue + AC. Task priority assigned to each issue, evaluated nightly and through human review |
+| F-1-1 | Task Retrieval | `autonomy next` returns highest-priority unblocked issue with transparent ranking. Priority score based on: Priority field (P0-P3), Sprint proximity, issue age, blocked status. Manual "Pinned" field prevents automatic reordering |
 | F-1-2 | Status Update | `autonomy update <id> --done --notes` rolls subtasks |
 | F-1-3 | Hierarchy Sync | Auto-maintain Epic → Task → Sub-task (Tasklists API) |
 | F-1-4 | Backlog Doctor | Nightly cron flags stale/dup/oversized, posts digest. Look at concept similarity in title + description |
