@@ -14,6 +14,8 @@ from .core.secret_vault import SecretVault
 from .core.workflow_manager import WorkflowManager
 from .github import (
     REQUIRED_GITHUB_SCOPES,
+    BoardManager,
+    GraphQLClient,
     IssueManager,
     get_github_token_scopes,
     validate_github_token_scopes,
@@ -38,6 +40,8 @@ __all__ = [
     "QAAgent",
     # GitHub integration
     "IssueManager",
+    "BoardManager",
+    "GraphQLClient",
     "REQUIRED_GITHUB_SCOPES",
     "get_github_token_scopes",
     "validate_github_token_scopes",

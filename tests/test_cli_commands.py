@@ -2,6 +2,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from src.cli.main import (
+    cmd_board_init,
     cmd_init,
     cmd_list,
     cmd_next,
@@ -156,3 +157,20 @@ def test_cmd_list(monkeypatch, tmp_path: Path, capsys):
     assert cmd_list(manager, args) == 0
     out = capsys.readouterr().out
     assert "#1" in out and "task a" in out
+
+
+def test_cmd_board_init(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+
+    class DummyBM:
+        def __init__(self, *a, **k):
+            self.called = False
+
+        def init_board(self):
+            self.called = True
+
+    dummy = DummyBM()
+    monkeypatch.setattr("src.github.board_manager.BoardManager", lambda *a, **kw: dummy)
+    args = SimpleNamespace()
+    assert cmd_board_init(manager, args) == 0
+    assert dummy.called
