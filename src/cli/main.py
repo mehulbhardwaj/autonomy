@@ -91,6 +91,30 @@ Environment Variables:
         "--issue", type=int, help="Show status for specific issue"
     )
 
+    # Next command
+    next_parser = subparsers.add_parser(
+        "next", help="Get highest-priority unblocked issue"
+    )
+    next_parser.add_argument("--assignee", help="Filter by assignee")
+    next_parser.add_argument("--team", help="Filter by team")
+
+    # Update command
+    update_parser = subparsers.add_parser(
+        "update", help="Update issue status and notes"
+    )
+    update_parser.add_argument("issue", type=int, help="Issue number to update")
+    update_parser.add_argument("--status", help="Status label to add")
+    update_parser.add_argument("--done", action="store_true", help="Close issue")
+    update_parser.add_argument("--notes", help="Add a comment to the issue")
+
+    # List command
+    list_parser = subparsers.add_parser("list", help="List current tasks")
+    list_parser.add_argument("--assignee", help="Filter by assignee")
+    list_parser.add_argument("--team", help="Filter by team")
+    list_parser.add_argument(
+        "--mine", action="store_true", help="List tasks assigned to the caller"
+    )
+
     # Auth command
     auth_parser = subparsers.add_parser("auth", help="Manage authentication")
     auth_parser.add_argument(
@@ -171,6 +195,12 @@ Environment Variables:
             return cmd_init(manager, args)
         elif args.command == "status":
             return cmd_status(manager, args)
+        elif args.command == "next":
+            return cmd_next(manager, args)
+        elif args.command == "update":
+            return cmd_update(manager, args)
+        elif args.command == "list":
+            return cmd_list(manager, args)
         elif args.command == "auth":
             return cmd_auth(vault, args)
         else:
@@ -269,6 +299,52 @@ def cmd_status(manager: WorkflowManager, args) -> int:
         print("  Pending review: 2")
         print("  Ready to merge: 1")
 
+    return 0
+
+
+def cmd_next(manager: WorkflowManager, args) -> int:
+    """Return the next best task."""
+    from ..tasks.task_manager import TaskManager
+
+    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    issue = tm.get_next_task(assignee=args.assignee, team=args.team)
+    if not issue:
+        print("No tasks found")
+        return 0
+
+    print(f"Next task: #{issue['number']} - {issue['title']}")
+    return 0
+
+
+def cmd_update(manager: WorkflowManager, args) -> int:
+    """Update an issue's status or completion."""
+    from ..tasks.task_manager import TaskManager
+
+    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    success = tm.update_task(
+        args.issue, status=args.status, done=args.done, notes=args.notes
+    )
+    if success:
+        print("✓ Issue updated")
+        return 0
+    print("✗ Failed to update issue")
+    return 1
+
+
+def cmd_list(manager: WorkflowManager, args) -> int:
+    """List open tasks."""
+    from ..tasks.task_manager import TaskManager
+
+    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    assignee = args.assignee
+    if args.mine:
+        assignee = assignee or os.getenv("GITHUB_USER")
+    issues = tm.list_tasks(assignee=assignee, team=args.team)
+    if not issues:
+        print("No tasks found")
+        return 0
+    for issue in issues:
+        print(f"#{issue['number']}: {issue['title']}")
     return 0
 
 

@@ -19,6 +19,7 @@ from .github import (
     validate_github_token_scopes,
 )
 from .planning.plan_manager import PlanManager
+from .tasks.task_manager import TaskManager
 from .slack import get_slack_auth_info
 
 __version__ = "0.1.0"
@@ -42,6 +43,7 @@ __all__ = [
     "validate_github_token_scopes",
     # Planning
     "PlanManager",
+    "TaskManager",
     "SecretVault",
     # Version info
     "__version__",
