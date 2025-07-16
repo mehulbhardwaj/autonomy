@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
-from ..github.issue_manager import IssueManager, Issue
+from ..github.issue_manager import Issue, IssueManager
 
 
 @dataclass

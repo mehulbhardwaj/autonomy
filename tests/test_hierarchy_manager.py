@@ -1,5 +1,5 @@
-from src.tasks.hierarchy_manager import HierarchyManager
 from src.github.issue_manager import Issue
+from src.tasks.hierarchy_manager import HierarchyManager
 
 
 class DummyIssueManager:
