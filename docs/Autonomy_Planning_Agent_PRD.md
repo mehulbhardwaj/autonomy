@@ -59,6 +59,10 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 | **H3** | IDE & Chat are preferred surfaces; separate web UI optional. | ≥ 70 % interactions via CLI/Slack | Need dedicated web UI sooner |
 | **H4** | Nightly “Backlog Doctor” cuts grooming meeting time ≥ 50 %. | Self-reported time logs | Reduce grooming features |
 | **H5** | GitHub-native hierarchy beats building a fresh SaaS tracker. | Tasklists stability + user feedback | Build proprietary board |
+| **H6** | A multi-queue ranking engine improves planned-vs-done ratio by ≥ 20 %.                                                      | Δ sprint completion % across two sprints                            | Ranking adds no measurable value           |
+| **H7** | Persistent overrides cut undo calls by ≥ 50 % vs. stateless overrides.                                                      | Undo events / 100 agent edits                                       | Override UX misunderstood                  |
+| **H8** | A simple Pin / Unpin toggle covers ≥ 90 % of “freeze this” use-cases and reduces manual drags by ≥ 30 %.                     | Drag events per sprint; pin usage rate                              | Need richer lock mechanism                 |
+| **H9** | A Reversal-Rule Engine can learn 70 % of recurring overrides and auto-apply them within two sprints.                        | % recurring overrides converted to auto-rules                       | Manual work remains high                   |
 
 *Failure of any critical hypothesis blocks progression to later phases.*
 
@@ -96,6 +100,8 @@ Create an **AI-augmented planning layer on top of GitHub** that delivers the spe
 - Repo bootstrap & monorepo CI  
 - Secret vault & PAT scopes  
 - CLI scaffold (`autonomy auth`, `whoami`)
+- Board Bootstrap Script: `autonomy board init`: Creates field on Github Projects Graph QL API for repo  
+
 
 **Definition of Done:** CLI authenticates and returns GitHub username. Authenticates Slack. 
 
@@ -146,10 +152,14 @@ TypeScript CLI & Slack (share GraphQL queries).
 - Pattern miner clusters reasons nightly; if same motif ≥ 3× → propose rule.
 Definition of Done: System takes in user-feedback whenever user overrides system's automated work. Is able to learn patterns for that repo, and stick with it in the future.
 2. Determine task priority algorithm based on global context and feedback from humans and task asignees (AI agents or Humans).
+- Multi-queue Ranking Engine (team & actor views)
+- Overrides ledger + Pin/Unpin Boolean field (auto-created by bootstrap)      
 3. Gather inputs from assignees (summarised logs during task execution, final completion comments). 
 3. Team-level rule suggestion engine
 4. Assign tasks to relevant Agents, AI tools and Human Reviewers. Enforce the Generate-Verify loop.
-5. Pilot analytics dashboard  
+5. Pilot analytics dashboard
+- Ship **Ranking Engine**, **Overrides Ledger**, **Pin/Unpin**, **Reversal-Rule Engine**.
+
 
 *Goal: raise bot-edit approval ≥ 90 % via learned rules.*
 **Tech Stack** Extract Go gateway once webhook volume > 1 req/s per repo.
@@ -190,22 +200,34 @@ Next.js web lens shares TS domain models with CLI.
 |----|----------|--------|
 | F-0-1 | Secure PAT storage | Vault-backed, env-agnostic |
 | F-0-2 | CLI Auth | OAuth device-flow handshake |
+| F-0-3 | Board Bootstrap            | `autonomy board init` creates Priority, Pinned, Sprint, Track fields if missing; caches field IDs |
+
 
 ### F-1 (MVP Beta)
 | ID | Function | Detail |
 |----|----------|--------|
-| F-1-1 | **Task Retrieval** | `autonomy next` returns highest-priority unblocked issue + AC. Task priority assigned to each issue, evaluated nightly and through human review |
-| F-1-2 | **Status Update** | `autonomy update <id> --done --notes` rolls subtasks |
-| F-1-3 | **Hierarchy Sync** | Auto-maintain Epic → Task → Sub-task (Tasklists API) |
-| F-1-4 | **Backlog Doctor** | Nightly cron flags stale/dup/oversized, posts digest. Look at concept similarity in title + description |
-| F-1-5 | **Undo** | Shadow-branch PR, JSON diff hash, `/autonomy undo` |
-| F-1-6 | **Instrumentation** | Track latency, approvals, undo rate, WAU |
+| F-1-1 | Task Retrieval | `autonomy next` returns highest-priority unblocked issue + AC. Task priority assigned to each issue, evaluated nightly and through human review |
+| F-1-2 | Status Update | `autonomy update <id> --done --notes` rolls subtasks |
+| F-1-3 | Hierarchy Sync | Auto-maintain Epic → Task → Sub-task (Tasklists API) |
+| F-1-4 | Backlog Doctor | Nightly cron flags stale/dup/oversized, posts digest. Look at concept similarity in title + description |
+| F-1-5 | Undo | Shadow-branch PR, JSON diff hash, `/autonomy undo` |
+| F-1-6 | Instrumentation | Track latency, approvals, undo rate, WAU |
+
 
 ### F-2 (Learning)
 | ID | Function | Detail |
 |----|----------|--------|
-| F-2-1 | Undo Feedback | Slack modal captures reason, severity, flow_area |
-| F-2-2 | Pattern Miner | Cluster feedback, auto-suggest team rules |
+| F-2-1  | Overrides Listener          | Webhook captures drag/field edits; writes to `overrides` table |
+| F-2-2  | Ranking Engine              | Weighted score; skips `pin=true`; reorders via `updateProjectV2ItemPosition` |
+| F-2-3  | Pin/Unpin Toggle            | `Pinned` single-select field; `/autonomy pin|unpin <id>` |
+| F-2-4  | Override Expiry Logic       | Position overrides expire at sprint end; others persistent until cleared |
+| F-2-5 | Reversal-Rule Engine v1 | Nightly clustering of recurring overrides; auto-creates team rule (weight tweak or label rule) |
+| F-2-6  | Structured Feedback Modal   | Slack modal after drag: capture reason, temp/permanent |
+| F-2-7  | Config Surface              | YAML/Slack settings for scoring weights & rule toggles |
+| F-2-8  | Metrics v2                  | Track pin usage, override frequency, planned/done delta |
+| F-2-9 | Undo Feedback | Slack modal captures reason, severity, flow_area |
+| F-2-10 | Pattern Miner | Cluster feedback, auto-suggest team rules |
+
 
 ### F-3 (Secure GA)
 | ID | Function | Detail |
