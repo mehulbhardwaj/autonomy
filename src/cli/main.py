@@ -115,6 +115,11 @@ Environment Variables:
         "--mine", action="store_true", help="List tasks assigned to the caller"
     )
 
+    # Board command
+    board_parser = subparsers.add_parser("board", help="Manage project board")
+    board_sub = board_parser.add_subparsers(dest="board_cmd")
+    board_sub.add_parser("init", help="Initialize board fields")
+
     # Auth command
     auth_parser = subparsers.add_parser("auth", help="Manage authentication")
     auth_parser.add_argument(
@@ -201,6 +206,11 @@ Environment Variables:
             return cmd_update(manager, args)
         elif args.command == "list":
             return cmd_list(manager, args)
+        elif args.command == "board":
+            if args.board_cmd == "init":
+                return cmd_board_init(manager, args)
+            print(f"Unknown board command: {args.board_cmd}")
+            return 1
         elif args.command == "auth":
             return cmd_auth(vault, args)
         else:
@@ -346,6 +356,20 @@ def cmd_list(manager: WorkflowManager, args) -> int:
     for issue in issues:
         print(f"#{issue['number']}: {issue['title']}")
     return 0
+
+
+def cmd_board_init(manager: WorkflowManager, args) -> int:
+    """Initialize project board fields."""
+    from ..github.board_manager import BoardManager
+
+    bm = BoardManager(manager.github_token, manager.owner, manager.repo)
+    try:
+        bm.init_board()
+        print("✓ Board initialized")
+        return 0
+    except Exception as e:
+        print(f"✗ Board initialization failed: {e}")
+        return 1
 
 
 def cmd_auth(vault: SecretVault, args) -> int:

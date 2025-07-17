@@ -1,5 +1,6 @@
 """GitHub integration utilities."""
 
+from .board_manager import BoardManager, GraphQLClient
 from .issue_manager import IssueManager
 from .pat_scopes import (
     REQUIRED_GITHUB_SCOPES,
@@ -9,6 +10,8 @@ from .pat_scopes import (
 
 __all__ = [
     "IssueManager",
+    "BoardManager",
+    "GraphQLClient",
     "REQUIRED_GITHUB_SCOPES",
     "get_github_token_scopes",
     "validate_github_token_scopes",
