@@ -108,8 +108,8 @@ pip install -e .[dev]
 # Install pre-commit hooks
 pre-commit install
 
-# Run tests
-pytest
+# Run checks (lint + tests)
+pre-commit run --all-files
 ```
 
 For more details see [docs/DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md).

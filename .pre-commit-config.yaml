@@ -16,3 +16,10 @@ repos:
     rev: v1.9.0
     hooks:
       - id: python-check-blanket-noqa
+  - repo: local
+    hooks:
+      - id: pytest
+        name: run tests
+        entry: pytest
+        language: system
+        pass_filenames: false

@@ -1,5 +1,3 @@
-from pathlib import Path
-
 from src.github.board_manager import BoardManager
 
 
