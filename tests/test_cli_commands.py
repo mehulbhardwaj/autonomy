@@ -13,6 +13,16 @@ from src.cli.main import (
 )
 
 
+class DummyResponse:
+    def __init__(self, data, status_code=200):
+        self._data = data
+        self.status_code = status_code
+        self.text = ""
+
+    def json(self):
+        return self._data
+
+
 class DummyManager:
     def __init__(self, workspace: Path):
         self.owner = "owner"
@@ -162,15 +172,42 @@ def test_cmd_list(monkeypatch, tmp_path: Path, capsys):
 def test_cmd_board_init(monkeypatch, tmp_path: Path):
     manager = DummyManager(tmp_path)
 
-    class DummyBM:
-        def __init__(self, *a, **k):
-            self.called = False
+    calls = []
 
-        def init_board(self):
-            self.called = True
+    def dummy_post(url, headers=None, json=None, timeout=10):
+        query = json["query"]
+        calls.append(query)
+        if "RepoProjects" in query:
+            return DummyResponse(
+                {"data": {"repository": {"id": "rid", "projectsV2": {"nodes": []}}}}
+            )
+        if "CreateProject" in query:
+            return DummyResponse(
+                {"data": {"createProjectV2": {"projectV2": {"id": "pid"}}}}
+            )
+        if "GetFields" in query:
+            return DummyResponse({"data": {"node": {"fields": {"nodes": []}}}})
+        if "CreateField" in query:
+            return DummyResponse(
+                {"data": {"createProjectV2Field": {"projectV2Field": {"id": "fid"}}}}
+            )
+        if "FieldOptions" in query:
+            return DummyResponse({"data": {"node": {"options": {"nodes": []}}}})
+        if "AddFieldOption" in query:
+            return DummyResponse(
+                {
+                    "data": {
+                        "addProjectV2FieldOption": {
+                            "projectV2SingleSelectFieldOption": {"id": "oid"}
+                        }
+                    }
+                }
+            )
+        return DummyResponse({"data": {}})
 
-    dummy = DummyBM()
-    monkeypatch.setattr("src.github.board_manager.BoardManager", lambda *a, **kw: dummy)
+    monkeypatch.setattr("requests.post", dummy_post)
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+
     args = SimpleNamespace()
     assert cmd_board_init(manager, args) == 0
-    assert dummy.called
+    assert any("CreateProject" in q for q in calls)
