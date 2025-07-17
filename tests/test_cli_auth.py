@@ -31,3 +31,26 @@ def test_cmd_auth_login(tmp_path):
     assert cmd_auth(vault, args) == 0
     assert vault.get_secret("github_token") == "g"
     assert vault.get_secret("slack_token") == "s"
+
+
+def test_cmd_auth_login_oauth(monkeypatch, tmp_path):
+    vault = SecretVault(vault_path=tmp_path / "v.json", key_path=tmp_path / "k.key")
+
+    class DummyFlow:
+        def __init__(self, cid):
+            self.cid = cid
+
+        def start_flow(self):
+            return SimpleNamespace(
+                device_code="d", user_code="u", verification_uri="http://u", interval=0
+            )
+
+        def poll_for_token(self, device_code: str, interval: int = 5):
+            assert device_code == "d"
+            return "tok"
+
+    monkeypatch.setattr("src.cli.main.GitHubDeviceFlow", DummyFlow)
+    monkeypatch.setenv("GITHUB_CLIENT_ID", "cid")
+    args = SimpleNamespace(action="login", token=None, slack_token=None)
+    assert cmd_auth(vault, args) == 0
+    assert vault.get_secret("github_token") == "tok"

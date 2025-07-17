@@ -13,6 +13,7 @@ from ..core.config import WorkflowConfig
 from ..core.secret_vault import SecretVault
 from ..core.workflow_manager import WorkflowManager
 from ..github import REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
+from ..github.device_flow import GitHubDeviceFlow
 
 
 def main():
@@ -378,8 +379,18 @@ def cmd_auth(vault: SecretVault, args) -> int:
         gh_token = args.token or os.getenv("GITHUB_TOKEN")
         slack_token = args.slack_token or os.getenv("SLACK_TOKEN")
         if not gh_token and not slack_token:
-            print("Error: provide --token and/or --slack-token for login")
-            return 1
+            client_id = os.getenv("GITHUB_CLIENT_ID")
+            if not client_id:
+                print("Error: provide --token or set GITHUB_CLIENT_ID for OAuth login")
+                return 1
+            try:
+                flow = GitHubDeviceFlow(client_id)
+                resp = flow.start_flow()
+                print(f"Open {resp.verification_uri} and enter code {resp.user_code}")
+                gh_token = flow.poll_for_token(resp.device_code, resp.interval)
+            except Exception as e:
+                print(f"Error: {e}")
+                return 1
         if gh_token:
             vault.set_secret("github_token", gh_token)
             print("✓ GitHub token stored in vault")

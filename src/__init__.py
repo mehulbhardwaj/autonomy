@@ -20,6 +20,7 @@ from .github import (
     get_github_token_scopes,
     validate_github_token_scopes,
 )
+from .github.device_flow import DeviceFlowResponse, GitHubDeviceFlow, OAuthError
 from .planning.plan_manager import PlanManager
 from .slack import get_slack_auth_info
 from .tasks.task_manager import TaskManager
@@ -45,6 +46,9 @@ __all__ = [
     "REQUIRED_GITHUB_SCOPES",
     "get_github_token_scopes",
     "validate_github_token_scopes",
+    "GitHubDeviceFlow",
+    "OAuthError",
+    "DeviceFlowResponse",
     # Planning
     "PlanManager",
     "TaskManager",
