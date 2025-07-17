@@ -363,7 +363,13 @@ def cmd_board_init(manager: WorkflowManager, args) -> int:
     """Initialize project board fields."""
     from ..github.board_manager import BoardManager
 
-    bm = BoardManager(manager.github_token, manager.owner, manager.repo)
+    cache_path = Path(manager.config.board_cache_path).expanduser()
+    bm = BoardManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        cache_path=cache_path,
+    )
     try:
         bm.init_board()
         print("✓ Board initialized")
