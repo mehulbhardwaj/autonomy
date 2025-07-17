@@ -133,7 +133,6 @@ omit = [
     "src/cli/*",
     "src/core/agents.py",
     "src/github/issue_manager.py",
-    "src/github/board_manager.py",
     "src/core/workflow_manager.py",
     "src/core/config.py",
     "src/core/secret_vault.py",
