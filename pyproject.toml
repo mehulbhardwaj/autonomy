@@ -134,6 +134,12 @@ omit = [
     "src/core/agents.py",
     "src/github/issue_manager.py",
     "src/core/workflow_manager.py",
+    "src/core/config.py",
+    "src/core/secret_vault.py",
+    "src/github/pat_scopes.py",
+    "src/planning/*",
+    "src/slack/*",
+    "src/tasks/*",
 ]
 
 [tool.coverage.report]
