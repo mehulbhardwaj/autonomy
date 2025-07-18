@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 
-import requests
+import httpx
 
 
 @dataclass
@@ -30,7 +30,7 @@ class GitHubDeviceFlow:
 
     def start_flow(self) -> DeviceFlowResponse:
         """Start the device authorization flow."""
-        response = requests.post(
+        response = httpx.post(
             f"{self.base_url}/code",
             data={
                 "client_id": self.client_id,
@@ -55,7 +55,7 @@ class GitHubDeviceFlow:
     def poll_for_token(self, device_code: str, interval: int = 5) -> str:
         """Poll GitHub until an access token is issued."""
         while True:
-            response = requests.post(
+            response = httpx.post(
                 self.api_url,
                 data={
                     "client_id": self.client_id,

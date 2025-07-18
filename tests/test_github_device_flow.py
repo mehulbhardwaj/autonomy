@@ -23,7 +23,7 @@ def test_start_flow(monkeypatch):
             },
         )
 
-    monkeypatch.setattr("requests.post", dummy_post)
+    monkeypatch.setattr("httpx.post", dummy_post)
     flow = GitHubDeviceFlow("cid")
     resp = flow.start_flow()
     assert isinstance(resp, DeviceFlowResponse)
@@ -40,7 +40,7 @@ def test_poll_for_token(monkeypatch):
             return DummyResponse(200, {"error": "authorization_pending"})
         return DummyResponse(200, {"access_token": "tok"})
 
-    monkeypatch.setattr("requests.post", dummy_post)
+    monkeypatch.setattr("httpx.post", dummy_post)
     monkeypatch.setattr("time.sleep", lambda x: None)
     flow = GitHubDeviceFlow("cid")
     token = flow.poll_for_token("d", interval=0)

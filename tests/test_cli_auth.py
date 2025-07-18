@@ -13,6 +13,17 @@ class DummyResponse:
         return self._json
 
 
+class DummyStorage:
+    def __init__(self):
+        self.token = None
+
+    def store_token(self, *a, **kw):
+        self.token = kw.get("token") or a[-1]
+
+    def get_token(self, *a, **kw):
+        return self.token
+
+
 def test_cmd_auth_slack(monkeypatch, tmp_path):
     vault = SecretVault(vault_path=tmp_path / "v.json", key_path=tmp_path / "k.key")
     vault.set_secret("slack_token", "tok")
@@ -25,8 +36,17 @@ def test_cmd_auth_slack(monkeypatch, tmp_path):
     assert cmd_auth(vault, args) == 0
 
 
-def test_cmd_auth_login(tmp_path):
+def test_cmd_auth_login(tmp_path, monkeypatch):
     vault = SecretVault(vault_path=tmp_path / "v.json", key_path=tmp_path / "k.key")
+
+    class DummyStorage:
+        def store_token(self, *a, **kw):
+            pass
+
+        def get_token(self, *a, **kw):
+            return None
+
+    monkeypatch.setattr("src.cli.main.SecureTokenStorage", lambda: DummyStorage())
     args = SimpleNamespace(action="login", token="g", slack_token="s")
     assert cmd_auth(vault, args) == 0
     assert vault.get_secret("github_token") == "g"
@@ -50,7 +70,10 @@ def test_cmd_auth_login_oauth(monkeypatch, tmp_path):
             return "tok"
 
     monkeypatch.setattr("src.cli.main.GitHubDeviceFlow", DummyFlow)
+    monkeypatch.setattr("src.cli.main.SecureTokenStorage", lambda: DummyStorage())
     monkeypatch.setenv("GITHUB_CLIENT_ID", "cid")
+    monkeypatch.setattr("src.cli.main.click.confirm", lambda *a, **kw: False)
+    monkeypatch.setattr("src.cli.main.webbrowser.open", lambda *a, **kw: True)
     args = SimpleNamespace(action="login", token=None, slack_token=None)
     assert cmd_auth(vault, args) == 0
     assert vault.get_secret("github_token") == "tok"

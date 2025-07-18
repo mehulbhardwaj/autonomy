@@ -8,6 +8,7 @@ from .pat_scopes import (
     get_github_token_scopes,
     validate_github_token_scopes,
 )
+from .token_storage import SecureTokenStorage, refresh_token_if_needed, validate_token
 
 __all__ = [
     "IssueManager",
@@ -19,4 +20,7 @@ __all__ = [
     "GitHubDeviceFlow",
     "DeviceFlowResponse",
     "OAuthError",
+    "SecureTokenStorage",
+    "validate_token",
+    "refresh_token_if_needed",
 ]
