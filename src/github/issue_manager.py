@@ -11,8 +11,6 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
-from ..audit.logger import AuditLogger
-
 try:
     import yaml
 except ImportError:
