@@ -10,7 +10,6 @@ from ..audit.logger import AuditLogger
 from ..audit.undo import UndoManager
 from ..github.issue_manager import IssueManager
 from ..tasks.backlog_doctor import BacklogDoctor
-from ..tasks.hierarchy_manager import HierarchyManager
 from ..tasks.task_manager import TaskManager
 
 
@@ -28,7 +27,6 @@ def create_app(
 
     task_manager = TaskManager.__new__(TaskManager)
     task_manager.issue_manager = issue_manager
-    hierarchy_manager = HierarchyManager(issue_manager)
     backlog_doctor = BacklogDoctor(issue_manager)
     audit_logger = audit_logger or AuditLogger(Path("audit.log"))
     undo_manager = UndoManager(issue_manager, audit_logger)

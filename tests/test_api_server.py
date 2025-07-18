@@ -50,7 +50,7 @@ def test_tasks_endpoints():
     assert resp.json()["number"] == 2
 
     resp = client.post(
-        f"/api/v1/tasks/1/update",
+        "/api/v1/tasks/1/update",
         json={"status": "in-progress", "done": True, "notes": "x"},
     )
     assert resp.status_code == 200
