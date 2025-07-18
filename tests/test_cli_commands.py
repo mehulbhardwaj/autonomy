@@ -3,6 +3,7 @@ from types import SimpleNamespace
 
 from src.cli.main import (
     cmd_board_init,
+    cmd_doctor,
     cmd_init,
     cmd_list,
     cmd_next,
@@ -209,3 +210,26 @@ def test_cmd_board_init_custom_path(monkeypatch, tmp_path: Path):
     assert cmd_board_init(manager, args) == 0
     assert Path(captured["path"]) == custom
     assert custom.exists()
+
+
+def test_cmd_doctor_run(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+    manager.issue_manager = object()
+
+    class DummyDoctor:
+        def __init__(self, mgr):
+            pass
+
+        def run(self, **kwargs):
+            return {"stale": [1], "duplicates": [], "oversized": []}
+
+    monkeypatch.setattr("src.tasks.backlog_doctor.BacklogDoctor", DummyDoctor)
+    args = SimpleNamespace(
+        doctor_cmd="run",
+        stale_days=14,
+        checklist_limit=10,
+        stale=False,
+        duplicates=False,
+        oversized=False,
+    )
+    assert cmd_doctor(manager, args) == 0

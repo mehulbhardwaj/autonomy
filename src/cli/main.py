@@ -124,6 +124,22 @@ Environment Variables:
         "--mine", action="store_true", help="List tasks assigned to the caller"
     )
 
+    # Doctor command
+    doctor_parser = subparsers.add_parser("doctor", help="Backlog doctor tools")
+    doctor_sub = doctor_parser.add_subparsers(dest="doctor_cmd")
+    run_parser = doctor_sub.add_parser("run", help="Run backlog checks")
+    run_parser.add_argument("--stale-days", type=int, default=14)
+    run_parser.add_argument("--checklist-limit", type=int, default=10)
+    run_parser.add_argument(
+        "--stale", action="store_true", help="Check only stale issues"
+    )
+    run_parser.add_argument(
+        "--duplicates", action="store_true", help="Check only duplicate issues"
+    )
+    run_parser.add_argument(
+        "--oversized", action="store_true", help="Check only oversized issues"
+    )
+
     # Board command
     board_parser = subparsers.add_parser("board", help="Manage project board")
     board_sub = board_parser.add_subparsers(dest="board_cmd")
@@ -227,6 +243,11 @@ Environment Variables:
             return cmd_update(manager, args)
         elif args.command == "list":
             return cmd_list(manager, args)
+        elif args.command == "doctor":
+            if args.doctor_cmd == "run":
+                return cmd_doctor(manager, args)
+            print(f"Unknown doctor command: {args.doctor_cmd}")
+            return 1
         elif args.command == "board":
             if args.board_cmd == "init":
                 return cmd_board_init(manager, args)
@@ -378,6 +399,30 @@ def cmd_list(manager: WorkflowManager, args) -> int:
         return 0
     for issue in issues:
         print(f"#{issue['number']}: {issue['title']}")
+    return 0
+
+
+def cmd_doctor(manager: WorkflowManager, args) -> int:
+    """Run backlog doctor checks."""
+    from ..tasks.backlog_doctor import BacklogDoctor
+
+    doctor = BacklogDoctor(manager.issue_manager)
+    only_flags = args.stale or args.duplicates or args.oversized
+    results = doctor.run(
+        stale_days=args.stale_days,
+        checklist_limit=args.checklist_limit,
+        check_stale=args.stale or not only_flags,
+        check_duplicates=args.duplicates or not only_flags,
+        check_oversized=args.oversized or not only_flags,
+    )
+    if results["stale"]:
+        print(f"Stale issues: {', '.join(map(str, results['stale']))}")
+    if results["duplicates"]:
+        print("Duplicate candidates:")
+        for a, b in results["duplicates"]:
+            print(f"  #{a} <-> #{b}")
+    if results["oversized"]:
+        print(f"Oversized issues: {', '.join(map(str, results['oversized']))}")
     return 0
 
 
