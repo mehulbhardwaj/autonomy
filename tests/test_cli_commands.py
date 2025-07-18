@@ -200,7 +200,7 @@ def test_cmd_board_init_custom_path(monkeypatch, tmp_path: Path):
             captured["path"] = cache_path
 
         def init_board(self):
-            (cache_path := Path(captured["path"])).write_text("{}")
+            Path(captured["path"]).write_text("{}")
             return {}
 
     monkeypatch.setattr("src.github.board_manager.BoardManager", DummyBM)
