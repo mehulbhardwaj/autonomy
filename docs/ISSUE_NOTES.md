@@ -10,3 +10,6 @@ Both features have been tested and integrated into the CLI, so Issues #1 and #2 
 
 ## Closed Issue #3
 CLI now includes Slack authentication and extended auth commands (login, logout, status, github, slack). Associated tests verify new functionality.
+
+## Closed Issue #9
+Initial Slack integration is implemented with a `SlackBot` helper and CLI `notify` command. Tests cover message posting and the new CLI workflow.

@@ -161,6 +161,9 @@ Environment Variables:
     slack_sub = slack_parser.add_subparsers(dest="slack_cmd")
     slack_sub.add_parser("test", help="Test Slack authentication")
     slack_sub.add_parser("channels", help="List Slack channels")
+    notify_parser = slack_sub.add_parser("notify", help="Send Slack notification")
+    notify_parser.add_argument("channel", help="Channel ID")
+    notify_parser.add_argument("message", help="Message text")
 
     # Auth command
     auth_parser = subparsers.add_parser("auth", help="Manage authentication")
@@ -659,6 +662,16 @@ def cmd_slack(vault: SecretVault, args) -> int:
         for ch in data.get("channels", []):
             print(f"{ch['id']}: {ch['name']}")
         return 0
+
+    if args.slack_cmd == "notify":
+        from ..slack import SlackBot
+
+        bot = SlackBot(token)
+        if bot.post_message(args.channel, args.message):
+            print("\N{CHECK MARK} Notification sent")
+            return 0
+        print("Error: failed to send notification")
+        return 1
 
     print(f"Unknown Slack command: {args.slack_cmd}")
     return 1
