@@ -30,7 +30,8 @@ classifiers = [
 ]
 dependencies = [
     "requests>=2.25.0",
-    "httpx>=0.25.0",
+    "httpx>=0.25.0,<0.28",
+    "fastapi>=0.95.0",
     "click>=8.0.0",
     "pydantic>=1.8.0",
     "rich>=10.0.0",
