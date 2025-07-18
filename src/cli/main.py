@@ -5,15 +5,23 @@ Command Line Interface for GitHub Workflow Manager
 import argparse
 import os
 import sys
+import webbrowser
 from pathlib import Path
 
+import click
 import requests
+from rich.console import Console
 
 from ..core.config import WorkflowConfig
 from ..core.secret_vault import SecretVault
 from ..core.workflow_manager import WorkflowManager
 from ..github import REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
 from ..github.device_flow import GitHubDeviceFlow
+from ..github.token_storage import (
+    SecureTokenStorage,
+    refresh_token_if_needed,
+    validate_token,
+)
 
 
 def main():
@@ -398,21 +406,35 @@ def cmd_auth(vault: SecretVault, args) -> int:
     if args.action == "login":
         gh_token = args.token or os.getenv("GITHUB_TOKEN")
         slack_token = args.slack_token or os.getenv("SLACK_TOKEN")
+        storage = SecureTokenStorage()
         if not gh_token and not slack_token:
             client_id = os.getenv("GITHUB_CLIENT_ID")
             if not client_id:
                 print("Error: provide --token or set GITHUB_CLIENT_ID for OAuth login")
                 return 1
             try:
+                console = Console()
+                console.print(
+                    "\N{LOCK WITH INK PEN} [bold]Authenticating with GitHub...[/bold]"
+                )
                 flow = GitHubDeviceFlow(client_id)
                 resp = flow.start_flow()
-                print(f"Open {resp.verification_uri} and enter code {resp.user_code}")
+                console.print(
+                    f"\n📋 Your device code: [bold cyan]{resp.user_code}[/bold cyan]"
+                )
+                console.print(
+                    f"🌐 Please visit: [bold blue]{resp.verification_uri}[/bold blue]"
+                )
+                if click.confirm("Open browser automatically?", default=True):
+                    webbrowser.open(resp.verification_uri)
+                console.print("\n⏳ Waiting for authentication...")
                 gh_token = flow.poll_for_token(resp.device_code, resp.interval)
             except Exception as e:
                 print(f"Error: {e}")
                 return 1
         if gh_token:
             vault.set_secret("github_token", gh_token)
+            storage.store_token("github", gh_token)
             print("✓ GitHub token stored in vault")
         if slack_token:
             vault.set_secret("slack_token", slack_token)
@@ -426,25 +448,38 @@ def cmd_auth(vault: SecretVault, args) -> int:
         return 0
 
     if args.action == "status":
+        storage = SecureTokenStorage()
         gh_token = (
-            args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+            args.token
+            or os.getenv("GITHUB_TOKEN")
+            or storage.get_token("github")
+            or vault.get_secret("github_token")
         )
         slack_token = (
             args.slack_token
             or os.getenv("SLACK_TOKEN")
             or vault.get_secret("slack_token")
         )
-        print(f"GitHub: {'logged in' if gh_token else 'not logged in'}")
+        gh_status = (
+            "logged in" if gh_token and validate_token(gh_token) else "not logged in"
+        )
+        print(f"GitHub: {gh_status}")
         print(f"Slack: {'logged in' if slack_token else 'not logged in'}")
         return 0
 
     if args.action == "github":
+        storage = SecureTokenStorage()
         token = (
-            args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+            args.token
+            or os.getenv("GITHUB_TOKEN")
+            or storage.get_token("github")
+            or vault.get_secret("github_token")
         )
         if not token:
             print("Error: GitHub token not found")
             return 1
+        client_id = os.getenv("GITHUB_CLIENT_ID", "")
+        token = refresh_token_if_needed(token, client_id) if client_id else token
         try:
             response = requests.get(
                 "https://api.github.com/user",

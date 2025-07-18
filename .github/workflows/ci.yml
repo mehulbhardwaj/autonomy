@@ -74,4 +74,5 @@ jobs:
           pytest -o addopts='' tests/test_cli_slack.py::test_cmd_slack_test -q
           pytest -o addopts='' tests/test_scaffold.py -q
           pytest -o addopts='' tests/test_installation.py -q
+          pytest -o addopts='' tests/test_token_storage.py -q
 

@@ -21,6 +21,11 @@ from .github import (
     validate_github_token_scopes,
 )
 from .github.device_flow import DeviceFlowResponse, GitHubDeviceFlow, OAuthError
+from .github.token_storage import (
+    SecureTokenStorage,
+    refresh_token_if_needed,
+    validate_token,
+)
 from .planning.plan_manager import PlanManager
 from .slack import (
     SlackOAuth,
@@ -55,6 +60,9 @@ __all__ = [
     "GitHubDeviceFlow",
     "OAuthError",
     "DeviceFlowResponse",
+    "SecureTokenStorage",
+    "validate_token",
+    "refresh_token_if_needed",
     # Planning
     "PlanManager",
     "TaskManager",
