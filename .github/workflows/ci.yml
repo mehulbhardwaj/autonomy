@@ -72,4 +72,5 @@ jobs:
           pytest -o addopts='' tests/test_cli_auth.py::test_cmd_auth_login_oauth -q
           pytest -o addopts='' tests/test_slack_oauth.py -q
           pytest -o addopts='' tests/test_cli_slack.py::test_cmd_slack_test -q
+          pytest -o addopts='' tests/test_scaffold.py -q
 
