@@ -29,8 +29,9 @@ from .slack import (
     verify_slack_signature,
 )
 from .tasks.task_manager import TaskManager
+from .verify import verify_installation
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __author__ = "Mehul Bhardwaj"
 __email__ = "mehul@example.com"
 __license__ = "MIT"
@@ -64,6 +65,7 @@ __all__ = [
     "SlackOAuth",
     "SlashCommandHandler",
     "verify_slack_signature",
+    "verify_installation",
 ]
 
 
