@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Optional
 
 try:
@@ -8,7 +7,10 @@ try:
 except Exception:  # pragma: no cover - keyring may not be installed
     keyring = None  # type: ignore
 
+import httpx
+
 from ..core.secret_vault import SecretVault
+from .device_flow import GitHubDeviceFlow
 
 
 class SecureTokenStorage:
@@ -40,8 +42,6 @@ class SecureTokenStorage:
         return self.vault.get_secret(f"{self.service_name}-{username}")
 
 
-import httpx
-
 REQUIRED_SCOPES = {"repo", "read:user", "read:org"}
 
 
@@ -63,9 +63,6 @@ def validate_token(token: str) -> bool:
         return REQUIRED_SCOPES.issubset(scopes)
     except Exception:
         return False
-
-
-from .device_flow import GitHubDeviceFlow
 
 
 def refresh_token_if_needed(token: str, client_id: str) -> str:

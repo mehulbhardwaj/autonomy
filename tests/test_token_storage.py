@@ -1,7 +1,6 @@
 from src.github.token_storage import (
     SecureTokenStorage,
     refresh_token_if_needed,
-    validate_token,
 )
 
 
