@@ -47,6 +47,9 @@ class WorkflowConfig:
     sde_agent_timeout: int = 120
     qa_agent_timeout: int = 60
 
+    # Board configuration
+    board_cache_path: str = "~/.autonomy/field_cache.json"
+
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "WorkflowConfig":
         """Create config from dictionary"""

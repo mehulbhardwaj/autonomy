@@ -26,6 +26,7 @@ class TestWorkflowConfig:
         assert config.max_function_lines == 40
         assert config.test_coverage_target == 0.75
         assert config.autonomy_level == "supervised"
+        assert config.board_cache_path.endswith("field_cache.json")
 
     def test_custom_config(self):
         """Test custom configuration values."""
@@ -36,6 +37,11 @@ class TestWorkflowConfig:
         assert config.max_file_lines == 500
         assert config.test_coverage_target == 0.9
         assert config.autonomy_level == "autonomous"
+
+    def test_custom_board_cache(self):
+        """Custom board cache path is stored."""
+        config = WorkflowConfig(board_cache_path="/tmp/cache.json")
+        assert config.board_cache_path == "/tmp/cache.json"
 
 
 class TestAgents:

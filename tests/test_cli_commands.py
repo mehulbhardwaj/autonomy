@@ -11,6 +11,7 @@ from src.cli.main import (
     cmd_status,
     cmd_update,
 )
+from src.core.config import WorkflowConfig
 
 
 class DummyResponse:
@@ -31,6 +32,7 @@ class DummyManager:
         self.github_token = "token"
         self.setup_called = False
         self.process_issue_called_with = None
+        self.config = WorkflowConfig(board_cache_path=str(workspace / "cache.json"))
 
     def setup_repository(self):
         self.setup_called = True
@@ -171,43 +173,39 @@ def test_cmd_list(monkeypatch, tmp_path: Path, capsys):
 
 def test_cmd_board_init(monkeypatch, tmp_path: Path):
     manager = DummyManager(tmp_path)
+    captured = {}
 
-    calls = []
+    class DummyBM:
+        def __init__(self, token, owner, repo, cache_path=None):
+            captured["path"] = cache_path
 
-    def dummy_post(url, headers=None, json=None, timeout=10):
-        query = json["query"]
-        calls.append(query)
-        if "RepoProjects" in query:
-            return DummyResponse(
-                {"data": {"repository": {"id": "rid", "projectsV2": {"nodes": []}}}}
-            )
-        if "CreateProject" in query:
-            return DummyResponse(
-                {"data": {"createProjectV2": {"projectV2": {"id": "pid"}}}}
-            )
-        if "GetFields" in query:
-            return DummyResponse({"data": {"node": {"fields": {"nodes": []}}}})
-        if "CreateField" in query:
-            return DummyResponse(
-                {"data": {"createProjectV2Field": {"projectV2Field": {"id": "fid"}}}}
-            )
-        if "FieldOptions" in query:
-            return DummyResponse({"data": {"node": {"options": {"nodes": []}}}})
-        if "AddFieldOption" in query:
-            return DummyResponse(
-                {
-                    "data": {
-                        "addProjectV2FieldOption": {
-                            "projectV2SingleSelectFieldOption": {"id": "oid"}
-                        }
-                    }
-                }
-            )
-        return DummyResponse({"data": {}})
+        def init_board(self):
+            return {}
 
-    monkeypatch.setattr("requests.post", dummy_post)
-    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+    monkeypatch.setattr("src.github.board_manager.BoardManager", DummyBM)
 
     args = SimpleNamespace()
     assert cmd_board_init(manager, args) == 0
-    assert any("CreateProject" in q for q in calls)
+    assert Path(captured["path"]) == Path(manager.config.board_cache_path)
+
+
+def test_cmd_board_init_custom_path(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+    custom = tmp_path / "custom.json"
+    manager.config.board_cache_path = str(custom)
+    captured = {}
+
+    class DummyBM:
+        def __init__(self, token, owner, repo, cache_path=None):
+            captured["path"] = cache_path
+
+        def init_board(self):
+            Path(captured["path"]).write_text("{}")
+            return {}
+
+    monkeypatch.setattr("src.github.board_manager.BoardManager", DummyBM)
+
+    args = SimpleNamespace()
+    assert cmd_board_init(manager, args) == 0
+    assert Path(captured["path"]) == custom
+    assert custom.exists()

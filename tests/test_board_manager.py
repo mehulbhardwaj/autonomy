@@ -101,3 +101,34 @@ def test_init_board_uses_existing(tmp_path, monkeypatch):
     result = bm.init_board()
     assert set(result) == {"Priority", "Pinned", "Sprint", "Track"}
     assert cache.exists()
+
+
+def test_default_cache_path(monkeypatch, tmp_path):
+    monkeypatch.setattr("pathlib.Path.home", lambda: tmp_path)
+
+    calls = []
+
+    def dummy_post(url, headers=None, json=None, timeout=10):
+        query = json["query"]
+        calls.append(query)
+        if "RepoProjects" in query:
+            return DummyResponse(
+                {"data": {"repository": {"id": "rid", "projectsV2": {"nodes": []}}}}
+            )
+        if "CreateProject" in query:
+            return DummyResponse(
+                {"data": {"createProjectV2": {"projectV2": {"id": "pid"}}}}
+            )
+        if "GetFields" in query:
+            return DummyResponse({"data": {"node": {"fields": {"nodes": []}}}})
+        if "CreateField" in query:
+            return DummyResponse(
+                {"data": {"createProjectV2Field": {"projectV2Field": {"id": "fid"}}}}
+            )
+        return DummyResponse({"data": {}})
+
+    monkeypatch.setattr("requests.post", dummy_post)
+    bm = BoardManager("t", "o", "r")
+    bm.init_board()
+    default_path = tmp_path / ".autonomy" / "field_cache.json"
+    assert default_path.exists()
