@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import requests
 
+from .commands import SlashCommandHandler
+from .oauth import SlackOAuth, verify_slack_signature
+
 
 def get_slack_auth_info(token: str) -> dict:
     """Return Slack auth information for the provided token.
@@ -19,3 +22,11 @@ def get_slack_auth_info(token: str) -> dict:
     if not data.get("ok"):
         raise ValueError(f"Slack authentication failed: {data.get('error')}")
     return data
+
+
+__all__ = [
+    "get_slack_auth_info",
+    "SlackOAuth",
+    "verify_slack_signature",
+    "SlashCommandHandler",
+]

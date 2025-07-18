@@ -22,7 +22,12 @@ from .github import (
 )
 from .github.device_flow import DeviceFlowResponse, GitHubDeviceFlow, OAuthError
 from .planning.plan_manager import PlanManager
-from .slack import get_slack_auth_info
+from .slack import (
+    SlackOAuth,
+    SlashCommandHandler,
+    get_slack_auth_info,
+    verify_slack_signature,
+)
 from .tasks.task_manager import TaskManager
 
 __version__ = "0.1.0"
@@ -56,6 +61,9 @@ __all__ = [
     # Version info
     "__version__",
     "get_slack_auth_info",
+    "SlackOAuth",
+    "SlashCommandHandler",
+    "verify_slack_signature",
 ]
 
 

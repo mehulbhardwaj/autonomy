@@ -70,4 +70,6 @@ jobs:
           pytest -o addopts='' tests/test_cli_commands.py::test_cmd_board_init_custom_path -q
           pytest -o addopts='' tests/test_github_device_flow.py -q
           pytest -o addopts='' tests/test_cli_auth.py::test_cmd_auth_login_oauth -q
+          pytest -o addopts='' tests/test_slack_oauth.py -q
+          pytest -o addopts='' tests/test_cli_slack.py::test_cmd_slack_test -q
 
