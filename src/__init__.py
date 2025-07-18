@@ -8,6 +8,7 @@ Inspired by "Writing Software in English" by Mehul Bhardwaj.
 https://mehulbhardwaj.substack.com/p/building-software-in-english
 """
 
+from .api import create_app
 from .core.agents import BaseAgent, PMAgent, QAAgent, SDEAgent
 from .core.config import WorkflowConfig
 from .core.secret_vault import SecretVault
@@ -76,6 +77,7 @@ __all__ = [
     "SlashCommandHandler",
     "verify_slack_signature",
     "verify_installation",
+    "create_app",
 ]
 
 
