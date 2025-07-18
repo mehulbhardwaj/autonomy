@@ -63,9 +63,14 @@ class WorkflowManager:
         self.config = config or WorkflowConfig()
 
         # Initialize components
+        from ..audit.logger import AuditLogger
         from ..github.issue_manager import IssueManager
 
-        self.issue_manager = IssueManager(github_token, owner, repo)
+        log_path = self.workspace_path / "audit.log"
+        self.audit_logger = AuditLogger(log_path, use_git=True)
+        self.issue_manager = IssueManager(
+            github_token, owner, repo, audit_logger=self.audit_logger
+        )
         self.pm_agent = PMAgent(self.config)
         self.sde_agent = SDEAgent(self.config)
         self.qa_agent = QAAgent(self.config)

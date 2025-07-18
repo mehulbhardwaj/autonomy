@@ -2,6 +2,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from src.cli.main import (
+    cmd_audit,
     cmd_board_init,
     cmd_doctor,
     cmd_init,
@@ -10,6 +11,7 @@ from src.cli.main import (
     cmd_process,
     cmd_setup,
     cmd_status,
+    cmd_undo,
     cmd_update,
 )
 from src.core.config import WorkflowConfig
@@ -25,6 +27,25 @@ class DummyResponse:
         return self._data
 
 
+class DummyIssueManager:
+    def __init__(self):
+        self.labels = None
+        self.state = None
+        self.comment = None
+
+    def update_issue_labels(self, issue_number, add_labels=None, remove_labels=None):
+        self.labels = (issue_number, add_labels, remove_labels)
+        return True
+
+    def update_issue_state(self, issue_number, state):
+        self.state = (issue_number, state)
+        return True
+
+    def add_comment(self, issue_number, comment):
+        self.comment = (issue_number, comment)
+        return True
+
+
 class DummyManager:
     def __init__(self, workspace: Path):
         self.owner = "owner"
@@ -34,6 +55,10 @@ class DummyManager:
         self.setup_called = False
         self.process_issue_called_with = None
         self.config = WorkflowConfig(board_cache_path=str(workspace / "cache.json"))
+        from src.audit.logger import AuditLogger
+
+        self.audit_logger = AuditLogger(workspace / "audit.log", use_git=True)
+        self.issue_manager = DummyIssueManager()
 
     def setup_repository(self):
         self.setup_called = True
@@ -233,3 +258,16 @@ def test_cmd_doctor_run(monkeypatch, tmp_path: Path):
         oversized=False,
     )
     assert cmd_doctor(manager, args) == 0
+
+
+def test_cmd_audit_and_undo(tmp_path: Path):
+    manager = DummyManager(tmp_path)
+    # simulate an operation by logging directly
+    h = manager.audit_logger.log(
+        "update_labels", {"issue": 1, "add_labels": ["a"], "remove_labels": None}
+    )
+    args_log = SimpleNamespace(audit_cmd="log")
+    assert cmd_audit(manager, args_log) == 0
+    args_undo = SimpleNamespace(hash=h, last=False)
+    assert cmd_undo(manager, args_undo) == 0
+    assert manager.issue_manager.labels == (1, [], ["a"])

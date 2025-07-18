@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from ..audit.logger import AuditLogger
+
 try:
     import yaml
 except ImportError:
@@ -55,7 +57,7 @@ class Issue:
 class IssueManager:
     """Main class for managing GitHub issues"""
 
-    def __init__(self, github_token: str, owner: str, repo: str):
+    def __init__(self, github_token: str, owner: str, repo: str, audit_logger=None):
         self.github_token = github_token
         self.owner = owner
         self.repo = repo
@@ -65,6 +67,9 @@ class IssueManager:
             "Accept": "application/vnd.github.v3+json",
             "Content-Type": "application/json",
         }
+
+        # Optional audit logger for tracking operations
+        self.audit_logger = audit_logger
 
         # Standard labels for the Generate-Verify loop
         self.standard_labels = [
@@ -202,6 +207,14 @@ class IssueManager:
             if response.status_code == 201:
                 issue_response = response.json()
                 print(f"✓ Created issue: {issue.title} (#{issue_response['number']})")
+                if self.audit_logger:
+                    self.audit_logger.log(
+                        "create_issue",
+                        {
+                            "issue": issue_response["number"],
+                            "title": issue.title,
+                        },
+                    )
                 return issue_response["number"]
             else:
                 print(f"✗ Failed to create issue {issue.title}: {response.text}")
@@ -245,7 +258,13 @@ class IssueManager:
                 headers=self.headers,
                 json={"state": state},
             )
-            return response.status_code == 200
+            success = response.status_code == 200
+            if success and self.audit_logger:
+                self.audit_logger.log(
+                    "update_state",
+                    {"issue": issue_number, "new": state},
+                )
+            return success
         except Exception:
             return False
 
@@ -274,7 +293,17 @@ class IssueManager:
                 headers=self.headers,
                 json={"labels": labels},
             )
-            return response.status_code == 200
+            success = response.status_code == 200
+            if success and self.audit_logger:
+                self.audit_logger.log(
+                    "update_labels",
+                    {
+                        "issue": issue_number,
+                        "add_labels": add_labels,
+                        "remove_labels": remove_labels,
+                    },
+                )
+            return success
         except Exception:
             return False
 
@@ -286,7 +315,13 @@ class IssueManager:
                 headers=self.headers,
                 json={"body": comment},
             )
-            return response.status_code in (200, 201)
+            success = response.status_code in (200, 201)
+            if success and self.audit_logger:
+                self.audit_logger.log(
+                    "add_comment",
+                    {"issue": issue_number, "comment": comment},
+                )
+            return success
         except Exception:
             return False
 
