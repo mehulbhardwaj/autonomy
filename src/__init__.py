@@ -33,6 +33,7 @@ from .slack import (
     get_slack_auth_info,
     verify_slack_signature,
 )
+from .tasks.backlog_doctor import BacklogDoctor
 from .tasks.task_manager import TaskManager
 from .verify import verify_installation
 
@@ -66,6 +67,7 @@ __all__ = [
     # Planning
     "PlanManager",
     "TaskManager",
+    "BacklogDoctor",
     "SecretVault",
     # Version info
     "__version__",
