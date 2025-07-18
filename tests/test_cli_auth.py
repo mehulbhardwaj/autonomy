@@ -21,7 +21,7 @@ def test_cmd_auth_slack(monkeypatch, tmp_path):
         return DummyResponse(200, {"ok": True, "team": "workspace"})
 
     monkeypatch.setattr("requests.post", dummy_post)
-    args = SimpleNamespace(action="slack", token=None, slack_token=None)
+    args = SimpleNamespace(action="slack", token=None, slack_token=None, install=False)
     assert cmd_auth(vault, args) == 0
 
 

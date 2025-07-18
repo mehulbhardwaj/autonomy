@@ -121,6 +121,13 @@ Environment Variables:
     board_sub = board_parser.add_subparsers(dest="board_cmd")
     board_sub.add_parser("init", help="Initialize board fields")
 
+    # Slack command
+    slack_parser = subparsers.add_parser("slack", help="Slack related commands")
+    slack_parser.add_argument("--token", help="Slack API token")
+    slack_sub = slack_parser.add_subparsers(dest="slack_cmd")
+    slack_sub.add_parser("test", help="Test Slack authentication")
+    slack_sub.add_parser("channels", help="List Slack channels")
+
     # Auth command
     auth_parser = subparsers.add_parser("auth", help="Manage authentication")
     auth_parser.add_argument(
@@ -130,6 +137,11 @@ Environment Variables:
     )
     auth_parser.add_argument("--token", help="GitHub personal access token")
     auth_parser.add_argument("--slack-token", help="Slack API token")
+    auth_parser.add_argument(
+        "--install",
+        action="store_true",
+        help="Show Slack OAuth install URL (with action=slack)",
+    )
 
     args = parser.parse_args()
 
@@ -212,6 +224,8 @@ Environment Variables:
                 return cmd_board_init(manager, args)
             print(f"Unknown board command: {args.board_cmd}")
             return 1
+        elif args.command == "slack":
+            return cmd_slack(vault, args)
         elif args.command == "auth":
             return cmd_auth(vault, args)
         else:
@@ -447,7 +461,21 @@ def cmd_auth(vault: SecretVault, args) -> int:
             return 1
 
     if args.action == "slack":
-        from ..slack import get_slack_auth_info
+        from ..slack import SlackOAuth, get_slack_auth_info
+
+        if args.install:
+            client_id = os.getenv("SLACK_CLIENT_ID")
+            if not client_id:
+                print("Error: SLACK_CLIENT_ID not set")
+                return 1
+            oauth = SlackOAuth(client_id, os.getenv("SLACK_CLIENT_SECRET", ""))
+            print(oauth.get_install_url())
+            return 0
+
+        if args.slack_token:
+            vault.set_secret("slack_token", args.slack_token)
+            print("✓ Slack token stored in vault")
+            return 0
 
         token = (
             args.slack_token
@@ -455,8 +483,8 @@ def cmd_auth(vault: SecretVault, args) -> int:
             or vault.get_secret("slack_token")
         )
         if not token:
-            print("Error: Slack token not found")
-            return 1
+            print("Slack: not logged in")
+            return 0
         try:
             info = get_slack_auth_info(token)
             print(info.get("team", info.get("team_id", "unknown")))
@@ -466,6 +494,44 @@ def cmd_auth(vault: SecretVault, args) -> int:
             return 1
 
     print("Unknown auth action")
+    return 1
+
+
+def cmd_slack(vault: SecretVault, args) -> int:
+    """Slack-specific commands."""
+    token = args.token or vault.get_secret("slack_token")
+    if not token:
+        print("Error: Slack token not found")
+        return 1
+
+    if args.slack_cmd == "test":
+        from ..slack import get_slack_auth_info
+
+        try:
+            get_slack_auth_info(token)
+            print("✓ Slack authentication successful")
+            return 0
+        except Exception as e:
+            print(f"Error: {e}")
+            return 1
+
+    if args.slack_cmd == "channels":
+        import requests
+
+        response = requests.get(
+            "https://slack.com/api/conversations.list",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10,
+        )
+        data = response.json()
+        if response.status_code != 200 or not data.get("ok"):
+            print("Error: failed to list channels")
+            return 1
+        for ch in data.get("channels", []):
+            print(f"{ch['id']}: {ch['name']}")
+        return 0
+
+    print(f"Unknown Slack command: {args.slack_cmd}")
     return 1
 
 
