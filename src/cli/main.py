@@ -145,6 +145,16 @@ Environment Variables:
     board_sub = board_parser.add_subparsers(dest="board_cmd")
     board_sub.add_parser("init", help="Initialize board fields")
 
+    # Audit command
+    audit_parser = subparsers.add_parser("audit", help="Audit related commands")
+    audit_sub = audit_parser.add_subparsers(dest="audit_cmd")
+    audit_sub.add_parser("log", help="Show audit log")
+
+    # Undo command
+    undo_parser = subparsers.add_parser("undo", help="Undo operations")
+    undo_parser.add_argument("hash", nargs="?", help="Operation hash")
+    undo_parser.add_argument("--last", action="store_true", help="Undo last operation")
+
     # Slack command
     slack_parser = subparsers.add_parser("slack", help="Slack related commands")
     slack_parser.add_argument("--token", help="Slack API token")
@@ -253,6 +263,13 @@ Environment Variables:
                 return cmd_board_init(manager, args)
             print(f"Unknown board command: {args.board_cmd}")
             return 1
+        elif args.command == "audit":
+            if args.audit_cmd == "log":
+                return cmd_audit(manager, args)
+            print(f"Unknown audit command: {args.audit_cmd}")
+            return 1
+        elif args.command == "undo":
+            return cmd_undo(manager, args)
         elif args.command == "slack":
             return cmd_slack(vault, args)
         elif args.command == "auth":
@@ -444,6 +461,38 @@ def cmd_board_init(manager: WorkflowManager, args) -> int:
     except Exception as e:
         print(f"✗ Board initialization failed: {e}")
         return 1
+
+
+def cmd_audit(manager: WorkflowManager, args) -> int:
+    """Show audit log entries."""
+    for entry in manager.audit_logger.iter_logs():
+        ts = entry.get("timestamp")
+        op = entry.get("operation")
+        h = entry.get("hash")
+        print(f"{ts} {h} {op}")
+    return 0
+
+
+def cmd_undo(manager: WorkflowManager, args) -> int:
+    """Undo a previously logged operation."""
+    from ..audit.undo import UndoManager
+
+    um = UndoManager(manager.issue_manager, manager.audit_logger)
+    if args.last:
+        result = um.undo_last()
+        if not result:
+            print("No operations to undo")
+            return 1
+        print(f"✓ Undid {result}")
+        return 0
+    if args.hash:
+        if um.undo(args.hash):
+            print(f"✓ Undid {args.hash}")
+            return 0
+        print("✗ Undo failed")
+        return 1
+    print("Error: provide hash or --last")
+    return 1
 
 
 def cmd_auth(vault: SecretVault, args) -> int:
