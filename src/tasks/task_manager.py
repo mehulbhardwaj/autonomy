@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from ..github.issue_manager import IssueManager
+from .pinned_items import PinnedItemsStore
 
 PRIORITY_WEIGHTS = {
     "priority-critical": 4,
@@ -16,8 +17,16 @@ PRIORITY_WEIGHTS = {
 class TaskManager:
     """Utility for retrieving and updating GitHub issues as tasks."""
 
-    def __init__(self, github_token: str, owner: str, repo: str) -> None:
+    def __init__(
+        self,
+        github_token: str,
+        owner: str,
+        repo: str,
+        pinned_store: PinnedItemsStore | None = None,
+    ) -> None:
         self.issue_manager = IssueManager(github_token, owner, repo)
+        self.pinned_store = pinned_store or PinnedItemsStore()
+        self.project_id = f"{owner}/{repo}"
 
     # -------------------------- retrieval helpers ---------------------------
     def _score_issue(
@@ -27,6 +36,8 @@ class TaskManager:
             label["name"] if isinstance(label, dict) and "name" in label else label
             for label in issue.get("labels", [])
         ]
+        if self.pinned_store.is_pinned(self.project_id, str(issue.get("number"))):
+            return (float("-inf"), {}) if explain else float("-inf")
         if "blocked" in labels or issue.get("state") == "closed":
             return (float("-inf"), {}) if explain else float("-inf")
 

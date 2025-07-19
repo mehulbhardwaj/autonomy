@@ -27,6 +27,10 @@ def create_app(
 
     task_manager = TaskManager.__new__(TaskManager)
     task_manager.issue_manager = issue_manager
+    from ..tasks.pinned_items import PinnedItemsStore
+
+    task_manager.pinned_store = PinnedItemsStore()
+    task_manager.project_id = f"{issue_manager.owner}/{issue_manager.repo}"
     backlog_doctor = BacklogDoctor(issue_manager)
     audit_logger = audit_logger or AuditLogger(Path("audit.log"))
     undo_manager = UndoManager(issue_manager, audit_logger)

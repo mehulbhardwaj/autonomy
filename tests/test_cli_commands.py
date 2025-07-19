@@ -8,10 +8,12 @@ from src.cli.main import (
     cmd_init,
     cmd_list,
     cmd_next,
+    cmd_pin,
     cmd_process,
     cmd_setup,
     cmd_status,
     cmd_undo,
+    cmd_unpin,
     cmd_update,
 )
 from src.core.config import WorkflowConfig
@@ -32,6 +34,7 @@ class DummyIssueManager:
         self.labels = None
         self.state = None
         self.comment = None
+        self.issues = {5: {"title": "t"}}
 
     def update_issue_labels(self, issue_number, add_labels=None, remove_labels=None):
         self.labels = (issue_number, add_labels, remove_labels)
@@ -44,6 +47,9 @@ class DummyIssueManager:
     def add_comment(self, issue_number, comment):
         self.comment = (issue_number, comment)
         return True
+
+    def get_issue(self, issue_number):
+        return self.issues.get(issue_number)
 
 
 class DummyManager:
@@ -193,7 +199,7 @@ def test_cmd_list(monkeypatch, tmp_path: Path, capsys):
     monkeypatch.setattr(
         "src.tasks.task_manager.TaskManager", lambda *a, **kw: DummyTM()
     )
-    args = SimpleNamespace(assignee=None, team=None, mine=False)
+    args = SimpleNamespace(assignee=None, team=None, mine=False, pinned=False)
     assert cmd_list(manager, args) == 0
     out = capsys.readouterr().out
     assert "#1" in out and "task a" in out
@@ -273,3 +279,16 @@ def test_cmd_audit_and_undo(tmp_path: Path):
     args_undo = SimpleNamespace(hash=h, last=False)
     assert cmd_undo(manager, args_undo) == 0
     assert manager.issue_manager.labels == (1, [], ["a"])
+
+
+def test_cmd_pin_unpin_and_list(monkeypatch, tmp_path: Path, capsys):
+    manager = DummyManager(tmp_path)
+
+    args_pin = SimpleNamespace(issue=5)
+    assert cmd_pin(manager, args_pin) == 0
+    args_list = SimpleNamespace(assignee=None, team=None, mine=False, pinned=True)
+    assert cmd_list(manager, args_list) == 0
+    out = capsys.readouterr().out
+    assert "#5" in out
+    args_unpin = SimpleNamespace(issue=5)
+    assert cmd_unpin(manager, args_unpin) == 0

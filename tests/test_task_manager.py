@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
+from src.tasks.pinned_items import PinnedItemsStore
 from src.tasks.task_manager import TaskManager
 
 
@@ -35,20 +36,24 @@ def _make_issue(num, prio, days=0):
     }
 
 
-def test_get_next_task(monkeypatch):
+def test_get_next_task(monkeypatch, tmp_path):
     issues = [_make_issue(1, "priority-low", 5), _make_issue(2, "priority-high", 1)]
     dummy = DummyIssueManager(issues)
     tm = TaskManager.__new__(TaskManager)
     tm.issue_manager = dummy
+    tm.pinned_store = PinnedItemsStore(config_dir=tmp_path)
+    tm.project_id = "o/r"
     issue = tm.get_next_task()
     assert issue["number"] == 2
 
 
-def test_get_next_task_explain(monkeypatch):
+def test_get_next_task_explain(monkeypatch, tmp_path):
     issues = [_make_issue(1, "priority-low", 0)]
     dummy = DummyIssueManager(issues)
     tm = TaskManager.__new__(TaskManager)
     tm.issue_manager = dummy
+    tm.pinned_store = PinnedItemsStore(config_dir=tmp_path)
+    tm.project_id = "o/r"
     issue, breakdown = tm.get_next_task(explain=True)
     assert issue["number"] == 1
     assert breakdown["priority"] == 1
@@ -64,7 +69,7 @@ def test_update_task(monkeypatch):
     assert dummy.comment == (3, "done")
 
 
-def test_get_next_task_none(monkeypatch):
+def test_get_next_task_none(monkeypatch, tmp_path):
     issues = [
         {"number": 1, "state": "closed", "labels": []},
         {"number": 2, "labels": ["blocked"]},
@@ -72,10 +77,12 @@ def test_get_next_task_none(monkeypatch):
     dummy = DummyIssueManager(issues)
     tm = TaskManager.__new__(TaskManager)
     tm.issue_manager = dummy
+    tm.pinned_store = PinnedItemsStore(config_dir=tmp_path)
+    tm.project_id = "o/r"
     assert tm.get_next_task() is None
 
 
-def test_list_tasks(monkeypatch):
+def test_list_tasks(monkeypatch, tmp_path):
     issues = [
         _make_issue(1, "priority-medium", 1),
         _make_issue(2, "priority-high", 5),
@@ -83,6 +90,8 @@ def test_list_tasks(monkeypatch):
     dummy = DummyIssueManager(issues)
     tm = TaskManager.__new__(TaskManager)
     tm.issue_manager = dummy
+    tm.pinned_store = PinnedItemsStore(config_dir=tmp_path)
+    tm.project_id = "o/r"
     tasks = tm.list_tasks()
     assert [t["number"] for t in tasks] == [2, 1]
 
@@ -100,3 +109,15 @@ def test_update_task_rollover(monkeypatch):
     tm.rollover_subtasks = roll
     tm.update_task(4, done=True)
     assert called["issue"] == 4
+
+
+def test_pinned_items_skipped(tmp_path):
+    issues = [_make_issue(1, "priority-high", 0)]
+    dummy = DummyIssueManager(issues)
+    store = PinnedItemsStore(config_dir=tmp_path)
+    store.pin_item("o/r", "1")
+    tm = TaskManager.__new__(TaskManager)
+    tm.issue_manager = dummy
+    tm.pinned_store = store
+    tm.project_id = "o/r"
+    assert tm.get_next_task() is None

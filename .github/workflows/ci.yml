@@ -81,5 +81,7 @@ jobs:
           pytest -o addopts='' tests/test_backlog_doctor.py -q
           pytest -o addopts='' tests/test_audit.py -q
           pytest -o addopts='' tests/test_cli_commands.py::test_cmd_audit_and_undo -q
+          pytest -o addopts='' tests/test_pinned_items.py -q
+          pytest -o addopts='' tests/test_cli_commands.py::test_cmd_pin_unpin_and_list -q
           pytest -o addopts='' tests/test_api_server.py -q
 
