@@ -1,17 +1,10 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from ..github.issue_manager import IssueManager
 from .pinned_items import PinnedItemsStore
-
-PRIORITY_WEIGHTS = {
-    "priority-critical": 4,
-    "priority-high": 3,
-    "priority-medium": 2,
-    "priority-low": 1,
-}
+from .ranking import RankingConfig, RankingEngine
 
 
 class TaskManager:
@@ -23,40 +16,21 @@ class TaskManager:
         owner: str,
         repo: str,
         pinned_store: PinnedItemsStore | None = None,
+        ranking_config: RankingConfig | None = None,
     ) -> None:
         self.issue_manager = IssueManager(github_token, owner, repo)
         self.pinned_store = pinned_store or PinnedItemsStore()
         self.project_id = f"{owner}/{repo}"
+        self.ranking = RankingEngine(ranking_config)
 
     # -------------------------- retrieval helpers ---------------------------
     def _score_issue(
         self, issue: Dict[str, Any], explain: bool = False
     ) -> float | tuple[float, dict]:
-        labels = [
-            label["name"] if isinstance(label, dict) and "name" in label else label
-            for label in issue.get("labels", [])
-        ]
-        if self.pinned_store.is_pinned(self.project_id, str(issue.get("number"))):
+        pinned = self.pinned_store.is_pinned(self.project_id, str(issue.get("number")))
+        if pinned:
             return (float("-inf"), {}) if explain else float("-inf")
-        if "blocked" in labels or issue.get("state") == "closed":
-            return (float("-inf"), {}) if explain else float("-inf")
-
-        priority = 0
-        for label in labels:
-            priority = max(priority, PRIORITY_WEIGHTS.get(label, 0))
-
-        created = issue.get("created_at")
-        age_days = 0
-        if created:
-            try:
-                dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-                age_days = (datetime.now(timezone.utc) - dt).days
-            except Exception:
-                pass
-        score = priority * 100 - age_days
-        if explain:
-            return score, {"priority": priority, "age_penalty": age_days}
-        return score
+        return self.ranking.score_issue(issue, pinned=False, explain=explain)
 
     def get_next_task(
         self,

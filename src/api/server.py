@@ -30,6 +30,9 @@ def create_app(
     from ..tasks.pinned_items import PinnedItemsStore
 
     task_manager.pinned_store = PinnedItemsStore()
+    from ..tasks.ranking import RankingEngine
+
+    task_manager.ranking = RankingEngine()
     task_manager.project_id = f"{issue_manager.owner}/{issue_manager.repo}"
     backlog_doctor = BacklogDoctor(issue_manager)
     audit_logger = audit_logger or AuditLogger(Path("audit.log"))

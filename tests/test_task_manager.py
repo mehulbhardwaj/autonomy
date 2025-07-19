@@ -43,6 +43,9 @@ def test_get_next_task(monkeypatch, tmp_path):
     tm.issue_manager = dummy
     tm.pinned_store = PinnedItemsStore(config_dir=tmp_path)
     tm.project_id = "o/r"
+    from src.tasks.ranking import RankingEngine
+
+    tm.ranking = RankingEngine()
     issue = tm.get_next_task()
     assert issue["number"] == 2
 
@@ -54,15 +57,22 @@ def test_get_next_task_explain(monkeypatch, tmp_path):
     tm.issue_manager = dummy
     tm.pinned_store = PinnedItemsStore(config_dir=tmp_path)
     tm.project_id = "o/r"
+    from src.tasks.ranking import RankingEngine
+
+    tm.ranking = RankingEngine()
     issue, breakdown = tm.get_next_task(explain=True)
     assert issue["number"] == 1
     assert breakdown["priority"] == 1
+    assert "age_penalty" in breakdown
 
 
 def test_update_task(monkeypatch):
     dummy = DummyIssueManager([])
     tm = TaskManager.__new__(TaskManager)
     tm.issue_manager = dummy
+    from src.tasks.ranking import RankingEngine
+
+    tm.ranking = RankingEngine()
     assert tm.update_task(3, status="in-progress", done=True, notes="done")
     assert dummy.updated == (3, ["in-progress"], None)
     assert dummy.state_update == (3, "closed")
@@ -79,6 +89,9 @@ def test_get_next_task_none(monkeypatch, tmp_path):
     tm.issue_manager = dummy
     tm.pinned_store = PinnedItemsStore(config_dir=tmp_path)
     tm.project_id = "o/r"
+    from src.tasks.ranking import RankingEngine
+
+    tm.ranking = RankingEngine()
     assert tm.get_next_task() is None
 
 
@@ -92,6 +105,9 @@ def test_list_tasks(monkeypatch, tmp_path):
     tm.issue_manager = dummy
     tm.pinned_store = PinnedItemsStore(config_dir=tmp_path)
     tm.project_id = "o/r"
+    from src.tasks.ranking import RankingEngine
+
+    tm.ranking = RankingEngine()
     tasks = tm.list_tasks()
     assert [t["number"] for t in tasks] == [2, 1]
 
@@ -100,6 +116,9 @@ def test_update_task_rollover(monkeypatch):
     dummy = DummyIssueManager([])
     tm = TaskManager.__new__(TaskManager)
     tm.issue_manager = dummy
+    from src.tasks.ranking import RankingEngine
+
+    tm.ranking = RankingEngine()
     called = {}
 
     def roll(num):
@@ -120,4 +139,7 @@ def test_pinned_items_skipped(tmp_path):
     tm.issue_manager = dummy
     tm.pinned_store = store
     tm.project_id = "o/r"
+    from src.tasks.ranking import RankingEngine
+
+    tm.ranking = RankingEngine()
     assert tm.get_next_task() is None

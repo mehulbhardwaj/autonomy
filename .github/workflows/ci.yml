@@ -84,4 +84,5 @@ jobs:
           pytest -o addopts='' tests/test_pinned_items.py -q
           pytest -o addopts='' tests/test_cli_commands.py::test_cmd_pin_unpin_and_list -q
           pytest -o addopts='' tests/test_api_server.py -q
+          pytest -o addopts='' tests/test_ranking_engine.py -q
 
