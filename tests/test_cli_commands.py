@@ -134,7 +134,9 @@ def test_cmd_next(monkeypatch, tmp_path: Path):
     manager = DummyManager(tmp_path)
 
     class DummyTM:
-        def get_next_task(self, assignee=None, team=None):
+        def get_next_task(self, assignee=None, team=None, explain=False):
+            if explain:
+                return {"number": 7, "title": "task"}, {"priority": 3, "age_penalty": 0}
             return {"number": 7, "title": "task"}
 
     monkeypatch.setattr(
@@ -166,8 +168,8 @@ def test_cmd_next_none(monkeypatch, tmp_path: Path, capsys):
     manager = DummyManager(tmp_path)
 
     class DummyTM:
-        def get_next_task(self, assignee=None, team=None):
-            return None
+        def get_next_task(self, assignee=None, team=None, explain=False):
+            return (None, {}) if explain else None
 
     monkeypatch.setattr(
         "src.tasks.task_manager.TaskManager", lambda *a, **kw: DummyTM()

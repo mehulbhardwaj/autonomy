@@ -42,6 +42,14 @@ class BoardManager:
         "Track": ("TEXT", []),
     }
 
+    DEFAULT_WEIGHTS = {
+        "priority_field": 5,
+        "sprint_proximity": 3,
+        "issue_age": 1,
+        "blocked_status": -100,
+        "pinned_override": 1000,
+    }
+
     def __init__(
         self,
         github_token: str,
@@ -179,3 +187,158 @@ class BoardManager:
                 self._ensure_options(field_id, options)
         self._save_cache(cache)
         return cache
+
+    # ------------------------------------------------------------------
+    def _get_project_items(self, project_id: str) -> list[dict]:
+        """Return project items with field values and issue data."""
+        query = """
+        query GetProjectItems($projectId: ID!) {
+          node(id: $projectId) {
+            ... on ProjectV2 {
+              items(first: 100, orderBy: {field: POSITION, direction: ASC}) {
+                nodes {
+                  id
+                  fieldValues(first: 10) {
+                    nodes {
+                      ... on ProjectV2ItemFieldSingleSelectValue {
+                        field { ... on ProjectV2SingleSelectField { name } }
+                        name
+                      }
+                      ... on ProjectV2ItemFieldIterationValue {
+                        field { ... on ProjectV2IterationField { name } }
+                        title
+                        startDate
+                        duration
+                      }
+                    }
+                  }
+                  content {
+                    ... on Issue {
+                      id
+                      number
+                      title
+                      labels(first: 10) { nodes { name } }
+                      createdAt
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+        data = self.client.execute(query, {"projectId": project_id})
+        items = []
+        nodes = data.get("node", {}).get("items", {}).get("nodes", [])
+        for node in nodes:
+            item = {"id": node.get("id"), "pinned": False, "priority": None}
+            for fv in node.get("fieldValues", {}).get("nodes", []):
+                fname = fv.get("field", {}).get("name")
+                if fname == "Priority":
+                    item["priority"] = fv.get("name")
+                if fname == "Pinned":
+                    item["pinned"] = fv.get("name") == "Yes"
+                if fname == "Sprint":
+                    start = fv.get("startDate")
+                    dur = fv.get("duration")
+                    if start and dur:
+                        try:
+                            from datetime import datetime, timedelta
+
+                            dt = datetime.fromisoformat(start)
+                            item["sprint_end"] = dt + timedelta(days=int(dur))
+                        except Exception:
+                            pass
+            content = node.get("content", {}) or {}
+            if isinstance(content, dict):
+                item["number"] = content.get("number")
+                item["title"] = content.get("title")
+                if content.get("labels"):
+                    item["labels"] = [l.get("name") for l in content["labels"]["nodes"]]
+                if content.get("createdAt"):
+                    from datetime import datetime
+
+                    try:
+                        item["created_at"] = datetime.fromisoformat(
+                            content["createdAt"].replace("Z", "+00:00")
+                        )
+                    except Exception:
+                        pass
+            items.append(item)
+        return items
+
+    # ------------------------------------------------------------------
+    def _score_item(self, item: dict, weights: Optional[dict] = None) -> float:
+        """Return priority score for a project item."""
+        from datetime import datetime
+
+        w = {**self.DEFAULT_WEIGHTS, **(weights or {})}
+        if "labels" in item and "blocked" in (item.get("labels") or []):
+            return float("-inf")
+
+        score = 0.0
+        priority_map = {"P0": 4, "P1": 3, "P2": 2, "P3": 1}
+        score += priority_map.get(item.get("priority"), 0) * w["priority_field"]
+
+        if item.get("sprint_end"):
+            try:
+                from datetime import timezone
+
+                days = (item["sprint_end"] - datetime.now(timezone.utc)).days
+                score += max(0, 30 - days) * w["sprint_proximity"]
+            except Exception:
+                pass
+
+        if item.get("created_at"):
+            from datetime import timezone
+
+            age = (datetime.now(timezone.utc) - item["created_at"]).days
+            score += age * w["issue_age"]
+
+        if item.get("pinned"):
+            score += w["pinned_override"]
+
+        return score
+
+    # ------------------------------------------------------------------
+    def rank_items(self, weights: Optional[dict] = None) -> list[dict]:
+        """Return project items sorted by priority score."""
+        project_id = self._find_or_create_project()
+        items = self._get_project_items(project_id)
+        scored = []
+        for itm in items:
+            score = self._score_item(itm, weights)
+            if score != float("-inf"):
+                scored.append((score, itm))
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [itm for _, itm in scored]
+
+    # ------------------------------------------------------------------
+    def _move_item(
+        self, project_id: str, item_id: str, after_id: Optional[str]
+    ) -> None:
+        mutation = """
+        mutation ReorderItem($projectId: ID!, $itemId: ID!, $afterId: ID) {
+          updateProjectV2ItemPosition(
+            input: {projectId: $projectId, itemId: $itemId, afterId: $afterId}
+          ) {
+            projectV2Item { id }
+          }
+        }
+        """
+        self.client.execute(
+            mutation,
+            {"projectId": project_id, "itemId": item_id, "afterId": after_id},
+        )
+
+    def reorder_items(self, weights: Optional[dict] = None) -> None:
+        """Reorder project items by priority score."""
+        project_id = self._find_or_create_project()
+        ranked = self.rank_items(weights)
+        last_id = None
+        for item in ranked:
+            if item.get("pinned"):
+                last_id = item["id"]
+                continue
+            self._move_item(project_id, item["id"], last_id)
+            last_id = item["id"]

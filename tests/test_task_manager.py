@@ -44,6 +44,16 @@ def test_get_next_task(monkeypatch):
     assert issue["number"] == 2
 
 
+def test_get_next_task_explain(monkeypatch):
+    issues = [_make_issue(1, "priority-low", 0)]
+    dummy = DummyIssueManager(issues)
+    tm = TaskManager.__new__(TaskManager)
+    tm.issue_manager = dummy
+    issue, breakdown = tm.get_next_task(explain=True)
+    assert issue["number"] == 1
+    assert breakdown["priority"] == 1
+
+
 def test_update_task(monkeypatch):
     dummy = DummyIssueManager([])
     tm = TaskManager.__new__(TaskManager)
