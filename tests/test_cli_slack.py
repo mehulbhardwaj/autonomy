@@ -54,3 +54,15 @@ def test_cmd_slack_channels(monkeypatch, tmp_path, capsys):
     assert cmd_slack(vault, args) == 0
     out = capsys.readouterr().out
     assert "gen" in out
+
+
+def test_cmd_slack_notify(monkeypatch, tmp_path):
+    vault = SecretVault(vault_path=tmp_path / "v.json", key_path=tmp_path / "k.key")
+    vault.set_secret("slack_token", "tok")
+
+    def dummy_post(url, json=None, headers=None, timeout=10):
+        return DummyResponse({"ok": True})
+
+    monkeypatch.setattr("requests.post", dummy_post)
+    args = SimpleNamespace(slack_cmd="notify", token=None, channel="C", message="hello")
+    assert cmd_slack(vault, args) == 0

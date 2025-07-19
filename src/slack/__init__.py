@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import requests
 
+from .bot import SlackBot
 from .commands import SlashCommandHandler
 from .oauth import SlackOAuth, verify_slack_signature
 
@@ -29,4 +30,5 @@ __all__ = [
     "SlackOAuth",
     "verify_slack_signature",
     "SlashCommandHandler",
+    "SlackBot",
 ]
