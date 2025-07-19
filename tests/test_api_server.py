@@ -13,6 +13,8 @@ class DummyIssueManager:
         self.updated = None
         self.state_update = None
         self.comment = None
+        self.owner = "o"
+        self.repo = "r"
 
     def list_issues(self, state="open"):
         return self._issues

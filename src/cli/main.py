@@ -123,6 +123,13 @@ Environment Variables:
     list_parser.add_argument(
         "--mine", action="store_true", help="List tasks assigned to the caller"
     )
+    list_parser.add_argument("--pinned", action="store_true", help="List pinned tasks")
+
+    # Pin/Unpin commands
+    pin_parser = subparsers.add_parser("pin", help="Pin an issue")
+    pin_parser.add_argument("issue", type=int, help="Issue number to pin")
+    unpin_parser = subparsers.add_parser("unpin", help="Unpin an issue")
+    unpin_parser.add_argument("issue", type=int, help="Issue number to unpin")
 
     # Doctor command
     doctor_parser = subparsers.add_parser("doctor", help="Backlog doctor tools")
@@ -256,6 +263,10 @@ Environment Variables:
             return cmd_update(manager, args)
         elif args.command == "list":
             return cmd_list(manager, args)
+        elif args.command == "pin":
+            return cmd_pin(manager, args)
+        elif args.command == "unpin":
+            return cmd_unpin(manager, args)
         elif args.command == "doctor":
             if args.doctor_cmd == "run":
                 return cmd_doctor(manager, args)
@@ -413,7 +424,20 @@ def cmd_update(manager: WorkflowManager, args) -> int:
 
 def cmd_list(manager: WorkflowManager, args) -> int:
     """List open tasks."""
+    from ..tasks.pinned_items import PinnedItemsStore
     from ..tasks.task_manager import TaskManager
+
+    store = PinnedItemsStore()
+    if args.pinned:
+        pinned = store.list_pinned(f"{manager.owner}/{manager.repo}")
+        if not pinned:
+            print("No pinned items")
+            return 0
+        for num in pinned:
+            issue = manager.issue_manager.get_issue(int(num))
+            title = issue.get("title") if issue else ""
+            print(f"#{num}: {title}")
+        return 0
 
     tm = TaskManager(manager.github_token, manager.owner, manager.repo)
     assignee = args.assignee
@@ -425,6 +449,26 @@ def cmd_list(manager: WorkflowManager, args) -> int:
         return 0
     for issue in issues:
         print(f"#{issue['number']}: {issue['title']}")
+    return 0
+
+
+def cmd_pin(manager: WorkflowManager, args) -> int:
+    """Pin an issue."""
+    from ..tasks.pinned_items import PinnedItemsStore
+
+    store = PinnedItemsStore()
+    store.pin_item(f"{manager.owner}/{manager.repo}", str(args.issue))
+    print(f"\N{CHECK MARK} Issue #{args.issue} pinned")
+    return 0
+
+
+def cmd_unpin(manager: WorkflowManager, args) -> int:
+    """Unpin an issue."""
+    from ..tasks.pinned_items import PinnedItemsStore
+
+    store = PinnedItemsStore()
+    store.unpin_item(f"{manager.owner}/{manager.repo}", str(args.issue))
+    print(f"\N{CHECK MARK} Issue #{args.issue} unpinned")
     return 0
 
 
