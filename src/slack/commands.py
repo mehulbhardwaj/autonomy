@@ -66,12 +66,12 @@ class SlashCommandHandler:
         tasks = self.task_manager.list_tasks(assignee=github_user)
         in_progress = len(
             [
-                t
-                for t in tasks
+                task
+                for task in tasks
                 if "in-progress"
                 in [
-                    l if isinstance(l, str) else l.get("name")
-                    for l in t.get("labels", [])
+                    label if isinstance(label, str) else label.get("name")
+                    for label in task.get("labels", [])
                 ]
             ]
         )
@@ -104,7 +104,8 @@ class SlashCommandHandler:
     # --------------------- helpers ---------------------
     def format_task_blocks(self, issue: Dict[str, Any]) -> List[Dict[str, Any]]:
         labels = [
-            l if isinstance(l, str) else l.get("name") for l in issue.get("labels", [])
+            label if isinstance(label, str) else label.get("name")
+            for label in issue.get("labels", [])
         ]
         issue_mgr = getattr(self.task_manager, "issue_manager", None)
         owner = issue_mgr.owner if issue_mgr else "owner"
