@@ -4,6 +4,7 @@ import requests
 
 from .bot import SlackBot
 from .commands import SlashCommandHandler
+from .mapping import SlackGitHubMapper
 from .oauth import SlackOAuth, verify_slack_signature
 
 
@@ -30,5 +31,6 @@ __all__ = [
     "SlackOAuth",
     "verify_slack_signature",
     "SlashCommandHandler",
+    "SlackGitHubMapper",
     "SlackBot",
 ]
