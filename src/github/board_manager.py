@@ -254,7 +254,8 @@ class BoardManager:
                 item["number"] = content.get("number")
                 item["title"] = content.get("title")
                 if content.get("labels"):
-                    item["labels"] = [l.get("name") for l in content["labels"]["nodes"]]
+                    labels = content["labels"]["nodes"]
+                    item["labels"] = [label.get("name") for label in labels]
                 if content.get("createdAt"):
                     from datetime import datetime
 
