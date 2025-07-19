@@ -381,12 +381,18 @@ def cmd_next(manager: WorkflowManager, args) -> int:
     from ..tasks.task_manager import TaskManager
 
     tm = TaskManager(manager.github_token, manager.owner, manager.repo)
-    issue = tm.get_next_task(assignee=args.assignee, team=args.team)
+    issue, breakdown = tm.get_next_task(
+        assignee=args.assignee, team=args.team, explain=True
+    )
     if not issue:
         print("No tasks found")
         return 0
 
     print(f"Next task: #{issue['number']} - {issue['title']}")
+    if breakdown:
+        print(
+            f"  Priority score: {breakdown.get('priority')} age_penalty={breakdown.get('age_penalty')}"
+        )
     return 0
 
 

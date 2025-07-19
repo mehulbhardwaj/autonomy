@@ -20,13 +20,15 @@ class TaskManager:
         self.issue_manager = IssueManager(github_token, owner, repo)
 
     # -------------------------- retrieval helpers ---------------------------
-    def _score_issue(self, issue: Dict[str, Any]) -> float:
+    def _score_issue(
+        self, issue: Dict[str, Any], explain: bool = False
+    ) -> float | tuple[float, dict]:
         labels = [
             label["name"] if isinstance(label, dict) and "name" in label else label
             for label in issue.get("labels", [])
         ]
         if "blocked" in labels or issue.get("state") == "closed":
-            return float("-inf")
+            return (float("-inf"), {}) if explain else float("-inf")
 
         priority = 0
         for label in labels:
@@ -40,12 +42,17 @@ class TaskManager:
                 age_days = (datetime.now(timezone.utc) - dt).days
             except Exception:
                 pass
-
-        return priority * 100 - age_days
+        score = priority * 100 - age_days
+        if explain:
+            return score, {"priority": priority, "age_penalty": age_days}
+        return score
 
     def get_next_task(
-        self, assignee: Optional[str] = None, team: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+        self,
+        assignee: Optional[str] = None,
+        team: Optional[str] = None,
+        explain: bool = False,
+    ) -> Optional[Dict[str, Any]] | tuple[Optional[Dict[str, Any]], dict]:
         """Return the highest scoring unblocked issue."""
         issues = self.issue_manager.list_issues(state="open")
         candidates = []
@@ -67,14 +74,19 @@ class TaskManager:
                 lbl.lower() == f"team:{team.lower()}" for lbl in labels
             ):
                 continue
-            score = self._score_issue(issue)
+            score_data = self._score_issue(issue, explain=explain)
+            if explain:
+                score, breakdown = score_data
+            else:
+                score = score_data
             if score != float("-inf"):
-                candidates.append((score, issue))
+                candidates.append((score, issue, breakdown if explain else None))
 
         if not candidates:
-            return None
+            return (None, {}) if explain else None
         candidates.sort(key=lambda x: x[0], reverse=True)
-        return candidates[0][1]
+        best_score, best_issue, breakdown = candidates[0]
+        return (best_issue, breakdown) if explain else best_issue
 
     def list_tasks(
         self,
