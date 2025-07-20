@@ -5,6 +5,13 @@ import requests
 from .bot import SlackBot
 from .commands import SlashCommandHandler
 from .mapping import SlackGitHubMapper
+from .notifications import (
+    BacklogDoctorNotifier,
+    MetricsDashboard,
+    NotificationScheduler,
+    NotificationTemplates,
+    SystemNotifier,
+)
 from .oauth import SlackOAuth, verify_slack_signature
 
 
@@ -33,4 +40,9 @@ __all__ = [
     "SlashCommandHandler",
     "SlackGitHubMapper",
     "SlackBot",
+    "BacklogDoctorNotifier",
+    "MetricsDashboard",
+    "SystemNotifier",
+    "NotificationTemplates",
+    "NotificationScheduler",
 ]

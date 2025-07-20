@@ -29,8 +29,13 @@ from .github.token_storage import (
 )
 from .planning.plan_manager import PlanManager
 from .slack import (
+    BacklogDoctorNotifier,
+    MetricsDashboard,
+    NotificationScheduler,
+    NotificationTemplates,
     SlackOAuth,
     SlashCommandHandler,
+    SystemNotifier,
     get_slack_auth_info,
     verify_slack_signature,
 )
@@ -76,6 +81,11 @@ __all__ = [
     "SlackOAuth",
     "SlashCommandHandler",
     "verify_slack_signature",
+    "BacklogDoctorNotifier",
+    "MetricsDashboard",
+    "SystemNotifier",
+    "NotificationTemplates",
+    "NotificationScheduler",
     "verify_installation",
     "create_app",
 ]

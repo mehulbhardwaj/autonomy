@@ -9,5 +9,8 @@ htmlcov/
 # Eggs
 *.egg-info/
 
+# Test logs
+*.log
+
 # Local vault
 .autonomy/
