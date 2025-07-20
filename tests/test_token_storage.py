@@ -1,7 +1,4 @@
-from src.github.token_storage import (
-    SecureTokenStorage,
-    refresh_token_if_needed,
-)
+from src.github.token_storage import SecureTokenStorage, refresh_token_if_needed
 
 
 class DummyKeyring:
