@@ -1,10 +1,10 @@
-# Test Strategy Document
+# Test Strategy Document (Core)
 
-**Version:** 2.0   |   **Project:** Autonomy Planning Agent   |   **Focus:** Agentic Platform Testing
+**Version:** 2.0   |   **Project:** Autonomy Planning Agent (Core)   |   **Focus:** Open Core Agentic Platform Testing
 
 ---
 
-## 1. Testing Philosophy
+## 1. Testing Philosophy (Core)
 
 ### Core Testing Principles
 1. **Test AI Agent Behavior**: Verify intelligent decision-making with predictable outcomes
@@ -22,7 +22,9 @@
 
 ---
 
-## 2. Test Architecture
+## 2. Test Architecture (Core)
+
+- This document covers only the open source, GPLv3-licensed core testing strategy. Proprietary/enterprise features are out of scope and will be detailed in the pro TEST doc.
 
 ### Test Pyramid Structure
 ```

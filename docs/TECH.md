@@ -1,4 +1,4 @@
-# Autonomy Planning Agent – Technical Architecture
+# Autonomy Planning Agent – Technical Architecture (Core)
 
 **Version:** 2.0   |   **Target:** Agentic Platform for Team Collaboration   |   **Design Principle:** Human + AI Collaboration
 
@@ -18,7 +18,9 @@
 
 ---
 
-## 2. Architectural Overview
+## 2. Architectural Overview (Core)
+
+- This document covers only the open source, GPLv3-licensed core architecture. Proprietary/enterprise features are out of scope and will be detailed in the pro TECH doc.
 
 ### System Architecture
 ```
@@ -64,7 +66,7 @@
 
 ---
 
-## 3. Simplified Agent Architecture
+## 3. Simplified Agent Architecture (Core)
 
 ### Core Design Philosophy
 
@@ -343,7 +345,7 @@ class WorkflowBase:
 
 ---
 
-## 4. Data Architecture
+## 4. Data Architecture (Core)
 
 ### Simplified Data Models
 
@@ -482,7 +484,7 @@ orchestrator.finance = platform.create_workflow(FinanceWorkflow)
 
 ---
 
-## 5. Integration Patterns
+## 5. Integration Patterns (Core)
 
 ### GitHub Projects v2 Integration
 ```python
@@ -553,7 +555,7 @@ class PlanningWorkflow(BaseWorkflow):
 
 ---
 
-## 6. Development Guidelines
+## 6. Development Guidelines (Core)
 
 ### Code Organization
 ```
@@ -655,7 +657,7 @@ class AgentToolUser:
 
 ---
 
-## 7. Security & Compliance
+## 7. Security & Compliance (Core)
 
 ### Security Architecture
 ```python
@@ -683,7 +685,7 @@ class SecurityManager:
 
 ---
 
-## 8. Testing Strategy
+## 8. Testing Strategy (Core)
 
 ### Test Architecture
 ```
@@ -709,7 +711,7 @@ Tests/
 
 ---
 
-## 9. Performance & Scalability
+## 9. Performance & Scalability (Core)
 
 ### Performance Targets
 - **CLI Response Time**: < 2 seconds for most operations
@@ -725,7 +727,7 @@ Tests/
 
 ---
 
-## 10. Deployment & Operations
+## 10. Deployment & Operations (Core)
 
 ### Development Environment
 ```bash
@@ -751,4 +753,9 @@ autonomy serve --dev
 
 ---
 
-**Next Steps**: This architecture supports the Phase 1 implementation roadmap while providing a foundation for advanced team collaboration features in future phases.
+## 11. See Also
+- The pro repo will contain a separate TECH doc for proprietary/enterprise features.
+
+---
+
+*This TECH doc is for the open source, GPLv3-licensed core only. For advanced, enterprise, and SaaS features, see the future pro TECH doc.*
