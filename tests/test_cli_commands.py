@@ -245,6 +245,25 @@ def test_cmd_board_init_custom_path(monkeypatch, tmp_path: Path):
     assert custom.exists()
 
 
+def test_cmd_board_init_arg_cache(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+    captured = {}
+
+    class DummyBM:
+        def __init__(self, token, owner, repo, cache_path=None):
+            captured["path"] = cache_path
+
+        def init_board(self):
+            return {}
+
+    monkeypatch.setattr("src.github.board_manager.BoardManager", DummyBM)
+
+    via_arg = tmp_path / "via_arg.json"
+    args = SimpleNamespace(cache=str(via_arg))
+    assert cmd_board_init(manager, args) == 0
+    assert Path(captured["path"]) == via_arg
+
+
 def test_cmd_doctor_run(monkeypatch, tmp_path: Path):
     manager = DummyManager(tmp_path)
     manager.issue_manager = object()
