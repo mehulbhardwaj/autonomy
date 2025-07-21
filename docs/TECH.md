@@ -1,37 +1,44 @@
 # Autonomy Planning Agent – Technical Architecture
 
-**Version:** 1.0   |   **Target:** GitHub-native Planning Layer   |   **Design Principle:** Simple, modular, incremental
+**Version:** 2.0   |   **Target:** Agentic Platform for Team Collaboration   |   **Design Principle:** Human + AI Collaboration
 
 ---
-## 1  Guiding Principles
-1. **GitHub-native** – use Projects v2, Issues, and native UI workflows
-2. **Start simple** – minimal viable architecture, add complexity only when needed
-3. **Modular design** – clean interfaces, composable components
-4. **Incremental growth** – each phase builds on previous without rewrites
-5. **Transparency first** – all operations auditable and reversible
+
+## 1. Vision & Principles
+
+### Core Vision
+**Agentic platform enabling humans + AI to collaborate for knowledge work**, specifically focused on intelligent GitHub project planning and task coordination.
+
+### Guiding Principles
+1. **Human + AI Collaboration** – AI agents augment human decision-making, don't replace it
+2. **Memory-Driven Intelligence** – Agents learn from past interactions and team patterns
+3. **Flexible Agent Coordination** – Support for multiple agent types (AI and human)
+4. **GitHub-Native Integration** – Leverage Projects v2, Issues, and native workflows
+5. **Transparency & Auditability** – All AI decisions explainable and reversible
 
 ---
-## 2  Core Architecture
 
-### System Overview
+## 2. Architectural Overview
+
+### System Architecture
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   CLI Client    │    │   Slack Bot     │    │   Web UI        │
-│   (Click)       │    │   (Webhook)     │    │   (Future)      │
+│   CLI Client    │    │   Slack Bot     │    │  Web Interface  │
+│   (Click)       │    │   (Webhooks)    │    │   (Future)      │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
                                  │
                     ┌─────────────────┐
-                    │  Planning API   │
-                    │   (FastAPI)     │
+                    │  Agent Platform │
+                    │   (LangGraph)   │
                     └─────────────────┘
                                  │
          ┌───────────────────────┼───────────────────────┐
          │                       │                       │
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  GitHub Client  │    │  Task Engine    │    │  Config Store   │
-│  (REST+GraphQL) │    │   (Ranking)     │    │   (Files)       │
+│  LLM Gateway    │    │  Memory System  │    │  Tool Registry  │
+│  (OpenRouter)   │    │   (Mem0)        │    │ (GitHub/Slack)  │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          └───────────────────────┼───────────────────────┘
@@ -43,244 +50,705 @@
                     └─────────────────┘
 ```
 
-### Phase 0-1 Stack (Simple Start)
-| Component | Technology | Rationale |
-|-----------|------------|-----------|
-| **Distribution** | pipx + PyPI | Professional Python package distribution |
-| **CLI** | Python Click | Simple, composable commands |
-| **API** | FastAPI | Async, type hints, auto docs |
-| **GitHub Auth** | Device-Flow OAuth | Better UX than manual PAT entry |
-| **GitHub** | httpx + GraphQL | REST for simple ops, GraphQL for Projects v2 |
-| **Slack** | Slack Web API + Webhooks | Slash commands, notifications, OAuth |
-| **Config** | Local files + Pydantic | No database complexity initially |
-| **Secrets** | OS keychain + file fallback | Native OS security, no external deps |
-| **Deployment** | Single Python process | Minimal operational overhead |
+### Technology Stack
+
+| Layer | Technology | Rationale |
+|-------|------------|-----------|
+| **Agent Orchestration** | LangGraph | Production-ready agent workflows with state management |
+| **LLM Integration** | OpenRouter | Unified access to 400+ models with fallback capabilities |
+| **Memory System** | Mem0 | Graph-based memory with relationship tracking |
+| **CLI Framework** | Python Click | Professional CLI with rich output |
+| **GitHub Integration** | GraphQL + REST | Projects v2 for advanced features, REST for simple ops |
+| **Slack Integration** | Slack Web API | Team communication and notifications |
+| **Secret Management** | OS Keychain + Fernet | Native security with encrypted fallback |
 
 ---
-## 3  Module Structure & Interfaces
 
-### Core Abstractions
+## 3. Simplified Agent Architecture
+
+### Core Design Philosophy
+
+**Keep it Simple**: LangGraph + Mem0 + OpenRouter provides everything we need for extensibility without over-engineering. Focus on elegant composition over complex abstraction.
+
+#### **Three-Layer Architecture**
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    LangGraph Workflows                     │
+│            (Orchestration & State Management)              │
+├─────────────────────────────────────────────────────────────┤
+│  Planning       │    Specialist    │      Custom           │
+│  Workflows      │    Workflows     │      Workflows        │
+│  • Plan Issue   │  • Code Review   │  • User-Defined       │
+│  • Prioritize   │  • Test Design   │  • Domain-Specific    │
+│  • Coordinate   │  • Security Scan │  • Integration        │
+├─────────────────────────────────────────────────────────────┤
+│         Shared Foundation: Mem0 + OpenRouter + Tools       │
+│         (Memory, LLM Gateway, GitHub/Slack Integration)    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Core Planning Agent (Out of the Box)
+
+The **Planning Agent** is the foundational organizational intelligence that ships with the platform. It's what makes this a team coordination tool rather than just a developer tool.
+
+#### **Planning Agent Core Responsibilities**
 ```python
-# GitHub API Client - unified interface
-class GitHubClient:
-    def __init__(self, token: str):
-        self.rest = RESTClient(token)
-        self.graphql = GraphQLClient(token)
+class PlanningWorkflow(BaseWorkflow):
+    """
+    Core Planning Agent - the organizational brain of the platform
+    Ships out of the box, provides immediate value for team coordination
+    """
     
-    # Issues
-    def get_issue(self, number: int) -> Issue
-    def update_issue(self, number: int, **kwargs) -> Issue
+    def _build_graph(self) -> StateGraph:
+        return StateGraph({
+            "analyze_issue": self.analyze_issue_context,
+            "rank_priority": self.calculate_priority_score,
+            "decompose_tasks": self.break_down_into_tasks,
+            "route_workflows": self.determine_required_workflows,
+            "assign_optimal": self.suggest_team_assignments,
+            "create_plan": self.generate_execution_plan,
+            "get_approval": self.human_approval_gate
+        })
     
-    # Projects v2
-    def get_project_items(self, project_id: str) -> List[ProjectItem]
-    def reorder_item(self, item_id: str, after_id: str = None) -> bool
-    def update_item_field(self, item_id: str, field_id: str, value: Any) -> bool
-
-# Task Management - simple and focused
-class TaskManager:
-    def __init__(self, github_client: GitHubClient):
-        self.github = github_client
-        self.ranking = RankingEngine()
+    def analyze_issue_context(self, state: Dict) -> Dict:
+        """Understand issue scope, type, and complexity"""
+        issue = state['issue']
+        
+        # Get similar issues from memory
+        similar_context = self.memory.search(
+            f"issues similar to {issue.title}",
+            filter_metadata={"repository": state['repository']}
+        )
+        
+        # Analyze with LLM
+        analysis = self.llm.complete([
+            {"role": "system", "content": "You are a planning expert. Analyze issues for scope, complexity, and type."},
+            {"role": "user", "content": f"""
+            Issue: {issue.title}
+            Description: {issue.body}
+            Labels: {issue.labels}
+            
+            Similar past issues: {similar_context}
+            
+            Analyze:
+            1. Issue type (bug, feature, epic, spike, etc.)
+            2. Complexity (low, medium, high)
+            3. Estimated effort (story points 1-8)
+            4. Key dependencies and blockers
+            5. Risk factors
+            """}
+        ])
+        
+        return {"analysis": analysis, **state}
     
-    def get_next_task(self, assignee: str = None) -> Optional[Task]
-    def update_task(self, task_id: str, **updates) -> bool
-    def list_tasks(self, **filters) -> List[Task]
-
-# Ranking Engine - extensible scoring
-class RankingEngine:
-    def __init__(self, config: RankingConfig):
-        self.config = config
+    def calculate_priority_score(self, state: Dict) -> Dict:
+        """Apply repo-specific ranking criteria with learning"""
+        issue = state['issue']
+        analysis = state['analysis']
+        
+        # Get repo-specific ranking preferences
+        ranking_config = self.memory.search(
+            f"priority ranking patterns",
+            filter_metadata={"repository": state['repository']}
+        )
+        
+        # Calculate base score from multiple signals
+        priority_score = self._calculate_base_priority(issue, analysis, ranking_config)
+        
+        # Apply team context adjustments
+        team_context = self.memory.search(
+            f"team capacity and preferences",
+            filter_metadata={"repository": state['repository']}
+        )
+        
+        adjusted_score = self._adjust_for_team_context(priority_score, team_context)
+        
+        return {"priority_score": adjusted_score, **state}
     
-    def score_task(self, task: Task, context: RankingContext) -> float
-    def rank_tasks(self, tasks: List[Task]) -> List[Task]
-    def explain_ranking(self, task: Task) -> str
-
-# Slack Integration - commands and notifications
-class SlackBot:
-    def __init__(self, bot_token: str):
-        self.client = SlackWebClient(token=bot_token)
-    
-    def handle_slash_command(self, command: str, args: Dict) -> SlackResponse
-    def post_notification(self, channel: str, message: str) -> bool
-    def send_interactive_message(self, channel: str, blocks: List) -> bool
+    def determine_required_workflows(self, state: Dict) -> Dict:
+        """Decide which other workflows this issue needs"""
+        analysis = state['analysis']
+        
+        required_workflows = []
+        
+        # Security review needed?
+        if any(keyword in analysis.lower() for keyword in ['auth', 'security', 'password', 'token']):
+            required_workflows.append('security')
+        
+        # Code review needed?
+        if 'implementation' in analysis.lower() or 'code' in analysis.lower():
+            required_workflows.append('code_review')
+        
+        # Documentation needed?
+        if 'api' in analysis.lower() or 'public' in analysis.lower():
+            required_workflows.append('documentation')
+        
+        return {"required_workflows": required_workflows, **state}
 ```
 
-### Module Organization
+#### **Repository-Specific Customization**
+```python
+class PlanningConfig:
+    """Per-repository planning configuration"""
+    
+    def __init__(self, repository: str):
+        self.repository = repository
+        
+        # Default ranking weights (can be overridden per repo)
+        self.ranking_weights = {
+            "priority_label": 0.4,      # P0=1.0, P1=0.7, P2=0.4, P3=0.1
+            "sprint_proximity": 0.3,     # How close to current sprint
+            "issue_age": 0.1,           # Older issues get slight boost
+            "dependency_urgency": 0.2,   # Blocks other work
+        }
+        
+        # Team-specific patterns (learned from memory)
+        self.team_preferences = {}
+        
+        # Workflow routing rules
+        self.workflow_rules = {
+            "security_keywords": ["auth", "security", "password", "token", "crypto"],
+            "documentation_requirements": ["api", "public", "integration"],
+            "performance_triggers": ["slow", "performance", "optimization", "scale"]
+        }
 ```
-src/
-├── core/
-│   ├── config.py           # Configuration management
-│   ├── secret_vault.py     # Encrypted credential storage
-│   └── auth.py             # Authentication flows
-├── github/
-│   ├── client.py           # Unified GitHub client
-│   ├── projects.py         # Projects v2 GraphQL operations
-│   └── issues.py           # Issues REST operations
-├── tasks/
-│   ├── manager.py          # Task retrieval and updates
-│   ├── ranking.py          # Priority scoring algorithms
-│   └── hierarchy.py        # Issue hierarchy management
-├── cli/
-│   ├── main.py             # CLI entry point
-│   └── commands/           # Command implementations
-└── slack/
-    ├── bot.py              # Slack bot implementation
-    ├── commands.py         # Slash command handlers
-    ├── notifications.py    # Notification formatting and sending
-    └── oauth.py            # Slack OAuth flow
+
+### Extensible Workflow Platform
+
+**Simple Inheritance Model** - Users create new workflows by inheriting from `BaseWorkflow`
+**Planning Agent Orchestration** - New workflows integrate with Planning Agent decisions  
+**Repository Customization** - Each repo can tune the Planning Agent's behavior
+
+### Simple Workflow-Based Implementation
+
+#### **Core Platform Pattern**
+```python
+class AutonomyPlatform:
+    def __init__(self):
+        # Shared foundation - simple and elegant
+        self.memory = Mem0Client()
+        self.llm = OpenRouterClient()
+        self.github = GitHubTools()
+        self.slack = SlackTools()
+    
+    def create_workflow(self, workflow_class: Type[BaseWorkflow]) -> BaseWorkflow:
+        """Create any workflow with shared foundation"""
+        return workflow_class(
+            memory=self.memory,
+            llm=self.llm,
+            github=self.github,
+            slack=self.slack
+        )
+
+class BaseWorkflow:
+    def __init__(self, memory: Mem0Client, llm: OpenRouterClient, 
+                 github: GitHubTools, slack: SlackTools):
+        self.memory = memory
+        self.llm = llm  
+        self.github = github
+        self.slack = slack
+        self.graph = self._build_graph()
+    
+    def _build_graph(self) -> StateGraph:
+        """Override this to define workflow steps"""
+        raise NotImplementedError
+
+# Example: Planning Workflow (Core)
+class PlanningWorkflow(BaseWorkflow):
+    def _build_graph(self) -> StateGraph:
+        return StateGraph({
+            "analyze_issue": self.analyze_issue,
+            "determine_approach": self.determine_approach,
+            "create_plan": self.create_plan,
+            "get_approval": self.get_human_approval
+        })
+    
+    def analyze_issue(self, state: Dict) -> Dict:
+        # Use shared memory and LLM
+        context = self.memory.get_context(f"issue_{state['issue_id']}")
+        analysis = self.llm.complete([
+            {"role": "system", "content": "You are a planning expert..."},
+            {"role": "user", "content": f"Analyze: {state['issue']} Context: {context}"}
+        ])
+        return {"analysis": analysis, **state}
+
+# Example: Code Review Workflow (Specialist)  
+class CodeReviewWorkflow(BaseWorkflow):
+    def _build_graph(self) -> StateGraph:
+        return StateGraph({
+            "fetch_pr": self.fetch_pr_details,
+            "analyze_code": self.analyze_code_changes,
+            "check_tests": self.verify_test_coverage,
+            "provide_feedback": self.generate_feedback
+        })
+
+# Example: Custom Security Workflow
+class SecurityWorkflow(BaseWorkflow):
+    def _build_graph(self) -> StateGraph:
+        return StateGraph({
+            "scan_vulnerabilities": self.run_security_scan,
+            "check_dependencies": self.check_dependency_security,
+            "validate_auth": self.validate_authentication,
+            "report_findings": self.create_security_report
+        })
+```
+
+### Workflow Composition & Orchestration
+
+```python
+# Simple workflow chaining and composition
+class MasterOrchestrator:
+    def __init__(self, platform: AutonomyPlatform):
+        self.platform = platform
+        
+        # Create workflows as needed - no registry overhead
+        self.planning = platform.create_workflow(PlanningWorkflow)
+        self.code_review = platform.create_workflow(CodeReviewWorkflow)
+        self.security = platform.create_workflow(SecurityWorkflow)
+    
+    def process_issue(self, issue: Issue) -> WorkflowResult:
+        # Start with planning (always)
+        plan_result = self.planning.execute({"issue": issue})
+        
+        # Chain additional workflows based on planning decision
+        if plan_result.requires_security_review:
+            security_result = self.security.execute(plan_result.state)
+            plan_result.state.update(security_result.state)
+        
+        if plan_result.has_code_changes:
+            review_result = self.code_review.execute(plan_result.state)
+            plan_result.state.update(review_result.state)
+        
+        return plan_result
+
+# Memory-driven intelligence - simple pattern
+class WorkflowBase:
+    def remember_and_learn(self, interaction_type: str, context: Dict, outcome: Dict):
+        """Simple pattern: remember what worked"""
+        self.memory.add({
+            "type": interaction_type,
+            "context": context,
+            "outcome": outcome,
+            "timestamp": datetime.now(),
+            "workflow": self.__class__.__name__
+        })
+    
+    def get_similar_context(self, current_situation: Dict) -> str:
+        """Simple pattern: get relevant past experiences"""
+        return self.memory.search(
+            query=f"similar to {current_situation}",
+            filter_metadata={"workflow": self.__class__.__name__}
+        )
 ```
 
 ---
-## 4  Data Models & Configuration
 
-### Core Data Types
+## 4. Data Architecture
+
+### Simplified Data Models
+
+#### **Core Workflow Models**
 ```python
 @dataclass
-class Task:
+class WorkflowState:
+    issue_id: str
+    current_step: str
+    context: Dict[str, Any]
+    artifacts: List[str]
+    human_approval_needed: bool = False
+    next_workflows: List[str] = field(default_factory=list)
+
+@dataclass
+class WorkflowResult:
+    success: bool
+    state: WorkflowState
+    outputs: Dict[str, Any]
+    next_action: Optional[str] = None
+    requires_security_review: bool = False
+    has_code_changes: bool = False
+
+@dataclass
+class Issue:
     id: str
-    number: int
     title: str
+    body: str
     labels: List[str]
     assignee: Optional[str]
-    priority: Optional[str]
-    pinned: bool = False
+    milestone: Optional[str]
     created_at: datetime
     updated_at: datetime
 
 @dataclass
-class RankingConfig:
-    weights: Dict[str, float] = field(default_factory=lambda: {
-        'priority_field': 5,
-        'sprint_proximity': 3,
-        'issue_age': 1,
-        'blocked_penalty': -100
-    })
-    excluded_labels: List[str] = field(default_factory=lambda: ['blocked'])
-    priority_mapping: Dict[str, int] = field(default_factory=lambda: {
-        'P0': 4, 'P1': 3, 'P2': 2, 'P3': 1
-    })
+class TeamContext:
+    repository: str
+    team_members: List[str]
+    preferences: Dict[str, Any]
+    workflow_settings: Dict[str, Any]
+
+# Memory is handled entirely by Mem0 - no custom memory models needed
+# LLM calls are handled entirely by OpenRouter - no custom LLM models needed
+# Tools are simple function calls - no complex tool models needed
 ```
 
-### Configuration Strategy
-1. **Code defaults** - sensible out-of-the-box behavior
-2. **Repository config** - `.autonomy/config.yaml` per repo
-3. **User config** - `~/.autonomy/config.yaml` for personal settings
-4. **Environment variables** - runtime overrides
-
----
-## 5  Incremental Evolution Path
-
-### Phase 0: Foundation (Weeks 1-2)
-- **Instant CLI bootstrap**: `pipx install autonomy` → `autonomy init` → authenticated in <60s
-- **Device-Flow OAuth**: Seamless GitHub authentication without manual PAT entry
-- **OS-native secret storage**: Keychain integration with file fallback
-- **Board bootstrap**: Automated Projects v2 field setup with caching
-- **Slack Bot setup**: Basic OAuth and webhook infrastructure
-- **Goal**: Professional distribution and frictionless onboarding
-
-### Phase 1: Core Features (Weeks 3-6)
-- Basic priority ranking system
-- Task retrieval and updates
-- Issue hierarchy management
-- Simple audit trail
-- **Goal**: Functional task management with transparency
-
-### Phase 2: Intelligence (Weeks 7-10)
-- Webhook-based override capture
-- Multi-queue ranking engine
-- Manual pin/unpin functionality
-- Pattern recognition for overrides
-- **Goal**: Smart automation with human oversight
-
-### Phase 3+: Scale & Polish
-- Database storage (when file storage isn't enough)
-- Caching layer (when performance requires it)
-- Monitoring & alerting (when operations require it)
-- **Goal**: Production readiness without premature optimization
-
----
-## 6  Performance & Scalability
-
-### GitHub API Efficiency
-- **Batch operations**: Group mutations to minimize API calls
-- **Intelligent caching**: Cache field mappings and project metadata
-- **Rate limit handling**: Exponential backoff with respect for limits
-- **GraphQL optimization**: Use for complex queries, REST for simple ops
-
-### Local Performance
-- **Lazy loading**: Load expensive operations only when needed
-- **Memory management**: Keep caches focused and bounded
-- **Async operations**: Use FastAPI's async capabilities
-
----
-## 7  Testing Strategy
-
-### Test Pyramid
-```
-    ┌─────────────┐
-    │   E2E Tests │  ← CLI workflows, GitHub integration
-    │    (Few)    │
-    └─────────────┘
-           ▲
-    ┌─────────────┐
-    │ Integration │  ← GitHub API, ranking engine
-    │   (Some)    │
-    └─────────────┘
-           ▲
-    ┌─────────────┐
-    │ Unit Tests  │  ← Individual functions, mocked APIs
-    │   (Many)    │
-    └─────────────┘
+### Simple Memory Integration
+```python
+# Just use Mem0 directly - no wrapper complexity
+class WorkflowWithMemory:
+    def __init__(self, memory: Mem0Client, llm: OpenRouterClient):
+        self.memory = memory
+        self.llm = llm
+    
+    def analyze_with_context(self, issue: Issue) -> str:
+        # Simple: get relevant memories
+        context = self.memory.search(f"issues similar to {issue.title}")
+        
+        # Simple: make LLM call with context
+        response = self.llm.complete([
+            {"role": "system", "content": "You are a planning expert. Use past context to inform decisions."},
+            {"role": "user", "content": f"Issue: {issue.title}\nContext: {context}\nAnalyze and plan."}
+        ])
+        
+        # Simple: remember this interaction
+        self.memory.add({
+            "issue_id": issue.id,
+            "analysis": response,
+            "timestamp": datetime.now(),
+            "outcome": "planned"  # Will be updated later
+        })
+        
+        return response
 ```
 
-### Test Categories
-- **Unit**: Mock GitHub API responses, test ranking logic
-- **Integration**: Real GitHub API with test repositories
-- **End-to-end**: Full CLI workflows and user scenarios
+### Simple Extension Pattern
+
+#### **Adding New Workflows - Just Inherit and Implement**
+```python
+# Want a security workflow? Just create it!
+class SecurityWorkflow(BaseWorkflow):
+    def _build_graph(self) -> StateGraph:
+        return StateGraph({
+            "scan_vulnerabilities": self.scan_vulnerabilities,
+            "check_dependencies": self.check_dependencies,
+            "create_report": self.create_security_report
+        })
+    
+    def scan_vulnerabilities(self, state: Dict) -> Dict:
+        # Get security context from memory
+        context = self.memory.search("security vulnerabilities in similar projects")
+        
+        # Use LLM to analyze code
+        analysis = self.llm.complete([
+            {"role": "system", "content": "You are a security expert. Analyze code for vulnerabilities."},
+            {"role": "user", "content": f"Code: {state['code']}\nContext: {context}"}
+        ])
+        
+        # Remember this analysis
+        self.memory.add({
+            "type": "security_scan",
+            "code_files": state['code_files'],
+            "findings": analysis,
+            "timestamp": datetime.now()
+        })
+        
+        return {"security_analysis": analysis, **state}
+
+# Want a documentation workflow? Just create it!
+class DocumentationWorkflow(BaseWorkflow):
+    def _build_graph(self) -> StateGraph:
+        return StateGraph({
+            "analyze_code": self.analyze_code_structure,
+            "generate_docs": self.generate_documentation,
+            "review_docs": self.review_documentation
+        })
+
+# Want a custom domain workflow? Just create it!
+class FinanceWorkflow(BaseWorkflow):
+    def _build_graph(self) -> StateGraph:
+        return StateGraph({
+            "check_compliance": self.check_financial_compliance,
+            "validate_calculations": self.validate_financial_calculations,
+            "generate_audit_trail": self.generate_audit_trail
+        })
+
+# Usage is simple - just instantiate what you need
+platform = AutonomyPlatform()
+orchestrator = MasterOrchestrator(platform)
+
+# Add any workflow you want
+orchestrator.security = platform.create_workflow(SecurityWorkflow)
+orchestrator.documentation = platform.create_workflow(DocumentationWorkflow)
+orchestrator.finance = platform.create_workflow(FinanceWorkflow)
+```
 
 ---
-## 8  Security & Compliance
 
-### Security Principles
-- **Minimal permissions**: Use least-privilege PAT scopes
-- **Credential encryption**: Fernet-based secret storage
-- **Audit logging**: All operations logged with timestamps
-- **No secret leakage**: Never log or expose credentials
+## 5. Integration Patterns
 
-### Compliance Readiness
-- **Audit trail**: Complete operation history
-- **Data retention**: Configurable log retention periods
-- **Access controls**: Repository-level permissions respected
-- **Encryption**: At-rest and in-transit encryption
+### GitHub Projects v2 Integration
+```python
+class ProjectsV2Manager:
+    def __init__(self):
+        self.graphql_client = GraphQLClient()
+        self.field_cache = FieldCache()
+    
+    def bootstrap_project(self, repo: Repository):
+        # Create required fields: Priority, Pinned, Sprint, Track
+        fields = {
+            "Priority": self.create_single_select_field(["P0", "P1", "P2", "P3"]),
+            "Pinned": self.create_boolean_field(),
+            "Sprint": self.create_iteration_field(),
+            "Track": self.create_text_field()
+        }
+        
+        # Cache field IDs for performance
+        self.field_cache.store(repo.id, fields)
+        return fields
+```
+
+### Simple Tool Integration
+```python
+# Just simple tool classes - no complex registry
+class GitHubTools:
+    def __init__(self, github_token: str):
+        self.client = GitHubClient(github_token)
+    
+    def get_issue(self, issue_id: str) -> Issue:
+        return self.client.get_issue(issue_id)
+    
+    def update_issue(self, issue_id: str, **updates) -> Issue:
+        return self.client.update_issue(issue_id, **updates)
+    
+    def create_pr(self, title: str, body: str, head: str, base: str) -> PullRequest:
+        return self.client.create_pr(title, body, head, base)
+
+class SlackTools:
+    def __init__(self, slack_token: str):
+        self.client = SlackClient(slack_token)
+    
+    def send_message(self, channel: str, message: str):
+        return self.client.send_message(channel, message)
+    
+    def notify_team(self, team: str, message: str):
+        return self.client.notify_team(team, message)
+
+# Workflows just use tools directly - simple and clear
+class PlanningWorkflow(BaseWorkflow):
+    def create_plan_pr(self, state: Dict) -> Dict:
+        # Create PR with plan
+        pr = self.github.create_pr(
+            title=f"Plan for issue #{state['issue_id']}",
+            body=state['plan_content'],
+            head="plan-branch",
+            base="main"
+        )
+        
+        # Notify team
+        self.slack.notify_team(
+            team="planning",
+            message=f"New plan ready for review: {pr.url}"
+        )
+        
+        return {"pr_created": pr.url, **state}
+```
 
 ---
-## 9  Deployment & Operations
 
-### Development
-- **Local development**: Personal GitHub tokens, file-based config
-- **Testing**: Pytest with mocked and real GitHub APIs
-- **CI/CD**: GitHub Actions with comprehensive test matrix
+## 6. Development Guidelines
 
-### Production (Future)
-- **Containerization**: Docker for consistent environments
-- **Configuration**: Environment-specific config files
-- **Monitoring**: Structured logging and metrics collection
-- **Scaling**: Horizontal scaling when needed
+### Code Organization
+```
+src/
+├── agents/                    # AI agent implementations
+│   ├── base.py               # Base agent interface
+│   ├── planning.py           # Planning agent
+│   ├── pm.py                 # PM agent
+│   ├── sde.py                # SDE agent
+│   └── qa.py                 # QA agent
+├── memory/                   # Memory system
+│   ├── mem0_client.py        # Mem0 integration
+│   ├── graph_store.py        # Graph relationships
+│   └── context_builder.py    # Context aggregation
+├── llm/                      # LLM integration
+│   ├── openrouter.py         # OpenRouter client
+│   ├── model_selector.py     # Model selection logic
+│   └── fallback.py           # Fallback strategies
+├── workflows/                # LangGraph workflows
+│   ├── planning.py           # Planning workflow
+│   ├── execution.py          # Task execution
+│   └── verification.py       # Outcome verification
+├── tools/                    # Tool implementations
+│   ├── registry.py           # Tool registry
+│   ├── github.py             # GitHub tools
+│   └── slack.py              # Slack tools
+└── core/                     # Core infrastructure
+    ├── config.py             # Configuration
+    ├── auth.py               # Authentication
+    └── audit.py              # Audit logging
+```
+
+### Design Patterns
+
+#### **Agent Factory Pattern**
+```python
+class AgentFactory:
+    @staticmethod
+    def create_agent(agent_type: str, config: AgentConfig) -> Agent:
+        if agent_type == "planning":
+            return PlanningAgent(config)
+        elif agent_type == "human":
+            return HumanAgent(config)
+        # ... other agent types
+```
+
+#### **Memory-First Development**
+```python
+# Always consider memory in agent decisions
+class MemoryAwareAgent(BaseAgent):
+    def process_request(self, request: Request) -> Response:
+        # 1. Retrieve relevant memories
+        memories = self.memory.get_context(request)
+        
+        # 2. Enrich request with memories
+        enriched_request = self.enrich_with_memory(request, memories)
+        
+        # 3. Process and remember outcome
+        response = self.process_enriched_request(enriched_request)
+        self.memory.remember_interaction(request, response)
+        
+        return response
+```
+
+#### **Tool-First Integration**
+```python
+# All external interactions through tool registry
+class AgentToolUser:
+    def __init__(self, tool_registry: ToolRegistry):
+        self.tools = tool_registry
+    
+    def update_github_issue(self, issue_id: str, updates: Dict):
+        return self.tools.execute_tool(
+            "github_update_issue",
+            agent=self,
+            params={"issue_id": issue_id, "updates": updates}
+        )
+```
+
+### Quality Standards
+
+#### **Agent Quality Guidelines**
+- **Explainable Decisions**: All AI decisions must include reasoning
+- **Memory Integration**: Agents should learn from past interactions
+- **Human Respect**: AI suggestions, human decisions for critical paths
+- **Error Recovery**: Graceful handling of LLM failures and tool errors
+
+#### **Memory Guidelines**
+- **Privacy**: Sensitive information should not be stored in memory
+- **Accuracy**: Memory updates should be validated for correctness
+- **Relevance**: Only store information that improves future decisions
+- **Cleanup**: Implement memory cleanup for outdated information
+
+#### **Tool Guidelines**
+- **Permission Checks**: All tool usage must be permission-validated
+- **Audit Logging**: Complete audit trail for all tool interactions
+- **Error Handling**: Robust error handling with meaningful messages
+- **Testing**: Mock tool interactions for reliable testing
 
 ---
-## 10  Anti-Patterns to Avoid
 
-### Over-Engineering
-- ❌ Complex ranking algorithms without user validation
-- ❌ Microservices before monolith is proven
-- ❌ Database optimization before performance issues
-- ❌ Custom UI before GitHub-native approach is exhausted
+## 7. Security & Compliance
 
-### Under-Engineering
-- ❌ No error handling for GitHub API failures
-- ❌ No audit trail for automated changes
-- ❌ No configuration validation
-- ❌ No transparency in ranking decisions
+### Security Architecture
+```python
+class SecurityManager:
+    def __init__(self):
+        self.permission_manager = PermissionManager()
+        self.audit_logger = AuditLogger()
+        self.secret_manager = SecretManager()
+    
+    def validate_agent_action(self, agent: Agent, action: Action) -> bool:
+        # Check agent permissions
+        if not self.permission_manager.can_perform(agent, action):
+            return False
+        
+        # Log attempted action
+        self.audit_logger.log_action_attempt(agent, action)
+        return True
+```
+
+### Compliance Features
+- **Complete Audit Trail**: All agent interactions logged with timestamps
+- **Permission Management**: Role-based access control for tools and actions
+- **Data Privacy**: Memory system respects data privacy requirements
+- **Reversible Actions**: All automated changes can be undone
 
 ---
-**Next Step:** Implement Phase 0 foundation with clean interfaces, then incrementally add intelligence while maintaining simplicity.
+
+## 8. Testing Strategy
+
+### Test Architecture
+```
+Tests/
+├── unit/                     # Individual component tests
+│   ├── test_agents.py        # Agent behavior tests
+│   ├── test_memory.py        # Memory system tests
+│   └── test_tools.py         # Tool functionality tests
+├── integration/              # Component interaction tests
+│   ├── test_workflows.py     # LangGraph workflow tests
+│   ├── test_github_api.py    # GitHub integration tests
+│   └── test_memory_llm.py    # Memory + LLM integration tests
+└── e2e/                      # End-to-end workflow tests
+    ├── test_planning_flow.py # Complete planning workflows
+    └── test_team_collaboration.py # Team collaboration scenarios
+```
+
+### Testing Guidelines
+- **Mock LLM Responses**: Use deterministic responses for reproducible tests
+- **Memory Isolation**: Each test gets isolated memory context
+- **Permission Testing**: Verify all permission checks work correctly
+- **Error Scenarios**: Test graceful degradation and error handling
+
+---
+
+## 9. Performance & Scalability
+
+### Performance Targets
+- **CLI Response Time**: < 2 seconds for most operations
+- **Memory Retrieval**: < 500ms for context building
+- **LLM Calls**: < 10 seconds for complex reasoning
+- **GitHub API**: Respect rate limits with intelligent caching
+
+### Scalability Considerations
+- **Memory Growth**: Implement memory cleanup strategies
+- **LLM Costs**: Model selection based on task complexity
+- **GitHub API**: Batch operations and intelligent caching
+- **Team Size**: Architecture supports teams of 2-50 members
+
+---
+
+## 10. Deployment & Operations
+
+### Development Environment
+```bash
+# Setup development environment
+git clone https://github.com/mehulbhardwaj/autonomy.git
+cd autonomy
+pip install -e .[dev]
+
+# Configure environment
+export GITHUB_TOKEN="your_token"
+export OPENROUTER_API_KEY="your_key"
+export MEM0_API_KEY="your_key"  # Optional for local deployment
+
+# Run development server
+autonomy serve --dev
+```
+
+### Production Deployment
+- **Package Distribution**: `pipx install autonomy` for global CLI
+- **Configuration**: Environment-based configuration with validation
+- **Monitoring**: Structured logging with metrics collection
+- **Updates**: Automated update notifications with changelog
+
+---
+
+**Next Steps**: This architecture supports the Phase 1 implementation roadmap while providing a foundation for advanced team collaboration features in future phases.
