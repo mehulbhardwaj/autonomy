@@ -150,7 +150,11 @@ Environment Variables:
     # Board command
     board_parser = subparsers.add_parser("board", help="Manage project board")
     board_sub = board_parser.add_subparsers(dest="board_cmd")
-    board_sub.add_parser("init", help="Initialize board fields")
+    board_init_parser = board_sub.add_parser("init", help="Initialize board fields")
+    board_init_parser.add_argument(
+        "--cache",
+        help="Path to field cache file",
+    )
 
     # Audit command
     audit_parser = subparsers.add_parser("audit", help="Audit related commands")
@@ -500,7 +504,11 @@ def cmd_board_init(manager: WorkflowManager, args) -> int:
     """Initialize project board fields."""
     from ..github.board_manager import BoardManager
 
-    cache_path = Path(manager.config.board_cache_path).expanduser()
+    cache_path = (
+        Path(args.cache).expanduser()
+        if getattr(args, "cache", None)
+        else Path(manager.config.board_cache_path).expanduser()
+    )
     bm = BoardManager(
         manager.github_token,
         manager.owner,
