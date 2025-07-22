@@ -44,6 +44,8 @@ __author__ = "Mehul Bhardwaj"
 __email__ = "mehul@example.com"
 __license__ = "MIT"
 
+from .utils.distribution import check_for_updates, verify_installation
+
 __all__ = [
     # Core classes
     "WorkflowManager",
@@ -81,6 +83,8 @@ __all__ = [
     "SystemNotifier",
     "NotificationTemplates",
     "NotificationScheduler",
+    "verify_installation",
+    "check_for_updates",
     "create_app",
 ]
 
