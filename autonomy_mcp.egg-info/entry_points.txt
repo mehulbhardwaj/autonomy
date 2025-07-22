@@ -1,2 +1,0 @@
-[console_scripts]
-autonomy-mcp = src.cli.main:main

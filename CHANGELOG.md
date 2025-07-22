@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Autonomy MCP will be documented in this file.
+All notable changes to Autonomy will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Multi-repository workflow support
 - GitHub Copilot integration
-- Playwright MCP for UI testing
+- Playwright integration for UI testing
 - Advanced agent customization
 
 ## [0.1.1] - 2025-07-16
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.0] - 2024-01-XX
 
 ### Added
-- Initial release of Autonomy MCP
+- Initial release of Autonomy
 - Core WorkflowManager with Generate-Verify loop implementation
 - PM-agent, SDE-agent, and QA-agent with specialized prompts
 - GitHub integration with Issues, Labels, Milestones, and Actions
@@ -54,7 +54,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Complete README with installation and usage instructions
 - Usage guide with examples and best practices
 - API reference documentation
-- MCP integration guide
 - GitHub Actions workflow examples
 
 ### Testing
@@ -70,7 +69,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### v0.1.0 - Initial Release
 
-This is the first release of Autonomy MCP, implementing the core concepts from the "Writing Software in English" blog post. The package enables human-AI collaboration in software development through a structured Generate-Verify loop.
+This is the first release of Autonomy, implementing the core concepts from the "Writing Software in English" blog post. The package enables human-AI collaboration in software development through a structured Generate-Verify loop.
 
 **Key Highlights:**
 - 🤖 Three specialized AI agents (PM, SDE, QA) with distinct roles
@@ -82,10 +81,10 @@ This is the first release of Autonomy MCP, implementing the core concepts from t
 
 **Getting Started:**
 ```bash
-pip install autonomy-mcp
+pip install autonomy
 export GITHUB_TOKEN="your_token"
-autonomy-mcp init --owner myorg --repo myproject
-autonomy-mcp process --owner myorg --repo myproject --issue 42
+autonomy init --owner myorg --repo myproject
+autonomy process --owner myorg --repo myproject --issue 42
 ```
 
 **What's Next:**
