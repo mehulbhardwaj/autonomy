@@ -202,15 +202,58 @@ Environment Variables:
 
     # Authentication commands do not require a token upfront
     token = None
+    storage = SecureTokenStorage()
+    client_id = os.getenv("GITHUB_CLIENT_ID", "")
     if args.command != "auth":
         token = (
-            args.token or os.getenv("GITHUB_TOKEN") or vault.get_secret("github_token")
+            args.token
+            or os.getenv("GITHUB_TOKEN")
+            or storage.get_token("github")
+            or vault.get_secret("github_token")
         )
+
+        # If no token and OAuth client id available, start device flow
+        if not token and client_id:
+            try:
+                console = Console()
+                console.print(
+                    "\N{LOCK WITH INK PEN} [bold]Authenticating with GitHub...[/bold]"
+                )
+                flow = GitHubDeviceFlow(client_id)
+                resp = flow.start_flow()
+                console.print(
+                    f"\n📋 Your device code: [bold cyan]{resp.user_code}[/bold cyan]"
+                )
+                console.print(
+                    f"🌐 Please visit: [bold blue]{resp.verification_uri}[/bold blue]"
+                )
+                if click.confirm("Open browser automatically?", default=True):
+                    webbrowser.open(resp.verification_uri)
+                console.print("\n⏳ Waiting for authentication...")
+                token = flow.poll_for_token(resp.device_code, resp.interval)
+                vault.set_secret("github_token", token)
+                storage.store_token("github", token)
+            except Exception as e:
+                print(f"Error: {e}")
+                return 1
+
         if not token:
             print(
                 "Error: GitHub token required. Use --token, set GITHUB_TOKEN, or store via 'autonomy auth login'."
             )
             return 1
+
+        # Refresh/validate token when client id is available
+        if client_id:
+            try:
+                new_token = refresh_token_if_needed(token, client_id)
+                if new_token != token:
+                    token = new_token
+                    vault.set_secret("github_token", token)
+                    storage.store_token("github", token)
+            except Exception as e:
+                print(f"Error: {e}")
+                return 1
 
         # Validate PAT scopes
         try:
