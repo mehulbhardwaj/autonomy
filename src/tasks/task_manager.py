@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ..github.issue_manager import IssueManager
@@ -17,11 +18,14 @@ class TaskManager:
         repo: str,
         pinned_store: PinnedItemsStore | None = None,
         ranking_config: RankingConfig | None = None,
+        config_path: str | None = None,
     ) -> None:
         self.issue_manager = IssueManager(github_token, owner, repo)
         self.pinned_store = pinned_store or PinnedItemsStore()
         self.project_id = f"{owner}/{repo}"
-        self.ranking = RankingEngine(ranking_config)
+        self.ranking = RankingEngine(
+            ranking_config, config_path=Path(config_path) if config_path else None
+        )
 
     # -------------------------- retrieval helpers ---------------------------
     def _score_issue(
