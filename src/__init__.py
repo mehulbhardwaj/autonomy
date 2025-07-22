@@ -9,6 +9,7 @@ Mehul Bhardwaj.
 from .api import create_app
 from .core.agents import BaseAgent, PMAgent, QAAgent, SDEAgent
 from .core.config import WorkflowConfig
+from .core.platform import AutonomyPlatform, BaseWorkflow
 from .core.secret_vault import SecretVault
 from .core.workflow_manager import WorkflowManager
 from .github import (
@@ -50,6 +51,8 @@ __all__ = [
     # Core classes
     "WorkflowManager",
     "WorkflowConfig",
+    "AutonomyPlatform",
+    "BaseWorkflow",
     # Agents
     "BaseAgent",
     "PMAgent",

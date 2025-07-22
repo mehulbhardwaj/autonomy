@@ -1,3 +1,4 @@
+import os
 from datetime import datetime, timedelta, timezone
 
 from src.tasks.ranking import RankingConfig, RankingEngine
@@ -34,3 +35,15 @@ def test_custom_weights():
     newer = _make_issue(4, "priority-low", 0)
     older = _make_issue(5, "priority-low", 5)
     assert eng.score_issue(newer) > eng.score_issue(older)
+
+
+def test_load_weights_from_file(tmp_path):
+    cfg_file = tmp_path / ".autonomy.yml"
+    cfg_file.write_text("weights:\n  issue_age: 5.0\n")
+    cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        eng = RankingEngine()
+        assert eng.config.weights["issue_age"] == 5.0
+    finally:
+        os.chdir(cwd)
