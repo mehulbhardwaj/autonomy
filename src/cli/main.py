@@ -208,7 +208,7 @@ Environment Variables:
         )
         if not token:
             print(
-                "Error: GitHub token required. Use --token, set GITHUB_TOKEN, or store via 'autonomy-mcp auth login'."
+                "Error: GitHub token required. Use --token, set GITHUB_TOKEN, or store via 'autonomy auth login'."
             )
             return 1
 
