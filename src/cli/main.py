@@ -544,11 +544,11 @@ def cmd_unpin(manager: WorkflowManager, args) -> int:
 def cmd_plan(manager: WorkflowManager, args) -> int:
     """Run planning workflow."""
     from ..core.platform import AutonomyPlatform
-    from ..planning.workflow import PlanningWorkflow
+    from ..planning.langgraph_workflow import LangGraphPlanningWorkflow
 
     issue = manager.issue_manager.get_issue(args.issue) or {}
     platform = AutonomyPlatform()
-    wf = platform.create_workflow(PlanningWorkflow)
+    wf = platform.create_workflow(LangGraphPlanningWorkflow)
     result = wf.run(issue)
     score = result.state.data.get("priority_score")
     print(f"Priority score: {score}")
