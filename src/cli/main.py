@@ -156,6 +156,20 @@ Environment Variables:
         help="Path to field cache file",
     )
 
+    # Planning commands
+    plan_parser = subparsers.add_parser("plan", help="Run planning workflow")
+    plan_parser.add_argument("issue", type=int, help="Issue number")
+
+    explain_parser = subparsers.add_parser(
+        "explain", help="Explain ranking for an issue"
+    )
+    explain_parser.add_argument("issue", type=int, help="Issue number")
+
+    tune_parser = subparsers.add_parser("tune", help="Customize ranking weights")
+    tune_parser.add_argument("--weights", nargs="*", help="key=value pairs")
+
+    subparsers.add_parser("memory", help="Show Planning Agent learning patterns")
+
     # Audit command
     audit_parser = subparsers.add_parser("audit", help="Audit related commands")
     audit_sub = audit_parser.add_subparsers(dest="audit_cmd")
@@ -314,6 +328,14 @@ Environment Variables:
             return cmd_pin(manager, args)
         elif args.command == "unpin":
             return cmd_unpin(manager, args)
+        elif args.command == "plan":
+            return cmd_plan(manager, args)
+        elif args.command == "explain":
+            return cmd_explain(manager, args)
+        elif args.command == "tune":
+            return cmd_tune(manager, args)
+        elif args.command == "memory":
+            return cmd_memory(manager, args)
         elif args.command == "doctor":
             if args.doctor_cmd == "run":
                 return cmd_doctor(manager, args)
@@ -516,6 +538,67 @@ def cmd_unpin(manager: WorkflowManager, args) -> int:
     store = PinnedItemsStore()
     store.unpin_item(f"{manager.owner}/{manager.repo}", str(args.issue))
     print(f"\N{CHECK MARK} Issue #{args.issue} unpinned")
+    return 0
+
+
+def cmd_plan(manager: WorkflowManager, args) -> int:
+    """Run planning workflow."""
+    from ..core.platform import AutonomyPlatform
+    from ..planning.workflow import PlanningWorkflow
+
+    issue = manager.issue_manager.get_issue(args.issue) or {}
+    platform = AutonomyPlatform()
+    wf = platform.create_workflow(PlanningWorkflow)
+    result = wf.run(issue)
+    score = result.state.data.get("priority_score")
+    print(f"Priority score: {score}")
+    return 0
+
+
+def cmd_explain(manager: WorkflowManager, args) -> int:
+    """Explain ranking for an issue."""
+    from ..tasks.ranking import RankingEngine
+
+    issue = manager.issue_manager.get_issue(args.issue) or {}
+    eng = RankingEngine()
+    score, breakdown = eng.score_issue(issue, explain=True)
+    print(f"Score: {score}")
+    for k, v in breakdown.items():
+        print(f"  {k}: {v}")
+    return 0
+
+
+def cmd_tune(manager: WorkflowManager, args) -> int:
+    """Write ranking weights to config file."""
+    from pathlib import Path
+
+    import yaml
+
+    weights = {}
+    for pair in args.weights or []:
+        if "=" in pair:
+            k, v = pair.split("=", 1)
+            try:
+                weights[k] = float(v)
+            except ValueError:
+                pass
+    cfg_path = Path(".autonomy.yml")
+    data = {"weights": weights}
+    cfg_path.write_text(yaml.safe_dump(data))
+    print("✓ Configuration updated")
+    return 0
+
+
+def cmd_memory(manager: WorkflowManager, args) -> int:
+    """Display learned patterns."""
+    from ..core.platform import AutonomyPlatform
+
+    platform = AutonomyPlatform()
+    if not platform.memory.store:
+        print("No patterns learned yet")
+        return 0
+    for k, v in platform.memory.store.items():
+        print(f"{k}: {v}")
     return 0
 
 

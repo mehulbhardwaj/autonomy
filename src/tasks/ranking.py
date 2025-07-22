@@ -50,8 +50,14 @@ class RankingConfig:
 class RankingEngine:
     """Multi-signal ranking engine for issues."""
 
-    def __init__(self, config: Optional[RankingConfig] = None) -> None:
+    def __init__(
+        self,
+        config: Optional[RankingConfig] = None,
+        *,
+        config_path: Path | None = None,
+    ) -> None:
         self.config = config or RankingConfig()
+        self.config.load_from_file(config_path or Path(".autonomy.yml"))
 
     # ------------------------------------------------------------------
     def score_issue(
