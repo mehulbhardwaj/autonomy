@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any, Dict
 
 from ..core.models import WorkflowResult
@@ -41,7 +42,10 @@ class PlanningWorkflow(BaseWorkflow):
     def analyze_issue(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Analyze issue using memory context and LLM."""
         title = state.get("title", "")
-        context = self.memory.search(f"similar:{title}")
+        repo = state.get("repository", "default")
+        context = self.memory.search(
+            f"similar:{title}", filter_metadata={"repository": repo}
+        )
         prompt = f"Analyze {title}. Context: {context}"
         models = (
             self.model_selector.get("analysis")
@@ -80,7 +84,12 @@ class PlanningWorkflow(BaseWorkflow):
         )
         tasks = [t.strip() for t in text.split(";") if t.strip()] or ["task1"]
         state["tasks"] = tasks
-        self.memory.add({f"tasks:{state.get('title','')}": text})
+        self.memory.add(
+            {
+                f"tasks:{state.get('title','')}": text,
+                "repository": state.get("repository", "default"),
+            }
+        )
         return state
 
     def route(self, state: Dict[str, Any]) -> Dict[str, Any]:
@@ -94,7 +103,10 @@ class PlanningWorkflow(BaseWorkflow):
 
     def assign(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Suggest assignment based on team data in memory."""
-        members = self.memory.search("team_members")
+        repo = state.get("repository", "default")
+        members = self.memory.search(
+            "team_members", filter_metadata={"repository": repo}
+        )
         if isinstance(members, str):
             choices = [m.strip() for m in members.split(",") if m.strip()]
         else:
@@ -121,8 +133,32 @@ class PlanningWorkflow(BaseWorkflow):
     def approve(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Record approval and learn outcome."""
         state["approved"] = True
-        self.memory.add({"last_plan": state.get("plan", "")})
+        self.memory.add(
+            {
+                "last_plan": state.get("plan", ""),
+                "repository": state.get("repository", "default"),
+            }
+        )
         return state
+
+    def learn_from_override(
+        self,
+        issue_id: str,
+        ai_decision: Dict[str, Any],
+        human_decision: Dict[str, Any],
+        repository: str = "default",
+    ) -> None:
+        """Record a human override of the AI's plan."""
+        self.memory.add(
+            {
+                "type": "human_override",
+                "issue_id": issue_id,
+                "ai_decision": str(ai_decision),
+                "human_decision": str(human_decision),
+                "timestamp": datetime.now().isoformat(),
+                "repository": repository,
+            }
+        )
 
     # Public API -------------------------------------------------------
     def run(self, issue: Dict[str, Any]) -> WorkflowResult:

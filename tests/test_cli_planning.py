@@ -54,7 +54,7 @@ def test_cmd_memory(tmp_path: Path, capsys, monkeypatch):
 
     class DummyMem:
         def __init__(self):
-            self.store = {"k": "v"}
+            self.store = {"default": {"k": "v"}}
 
     class DummyPlatform:
         def __init__(self):
@@ -63,4 +63,5 @@ def test_cmd_memory(tmp_path: Path, capsys, monkeypatch):
     monkeypatch.setattr("src.core.platform.AutonomyPlatform", DummyPlatform)
     assert cmd_memory(manager, args) == 0
     out = capsys.readouterr().out
+    assert "Repository: default" in out
     assert "k: v" in out
