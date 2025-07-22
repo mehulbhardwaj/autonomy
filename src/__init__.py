@@ -1,11 +1,9 @@
 """
-Autonomy MCP - Enable human-AI collaboration in software development
+Autonomy - Enable human-AI collaboration in software development.
 
-A utility package for implementing the Generate-Verify loop workflow with AI agents.
-Supports PM-agent, SDE-agent, and QA-agent roles with human oversight.
-
-Inspired by "Writing Software in English" by Mehul Bhardwaj.
-https://mehulbhardwaj.substack.com/p/building-software-in-english
+Utilities for coordinating AI agents and human teammates through a
+Generate-Verify workflow. Inspired by "Writing Software in English" by
+Mehul Bhardwaj.
 """
 
 from .api import create_app
@@ -27,7 +25,6 @@ from .github.token_storage import (
     refresh_token_if_needed,
     validate_token,
 )
-from .planning.plan_manager import PlanManager
 from .slack import (
     BacklogDoctorNotifier,
     MetricsDashboard,
@@ -41,7 +38,6 @@ from .slack import (
 )
 from .tasks.backlog_doctor import BacklogDoctor
 from .tasks.task_manager import TaskManager
-from .verify import verify_installation
 
 __version__ = "0.1.1"
 __author__ = "Mehul Bhardwaj"
@@ -71,7 +67,6 @@ __all__ = [
     "validate_token",
     "refresh_token_if_needed",
     # Planning
-    "PlanManager",
     "TaskManager",
     "BacklogDoctor",
     "SecretVault",
@@ -86,7 +81,6 @@ __all__ = [
     "SystemNotifier",
     "NotificationTemplates",
     "NotificationScheduler",
-    "verify_installation",
     "create_app",
 ]
 

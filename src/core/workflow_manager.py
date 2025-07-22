@@ -1,8 +1,8 @@
 """
 Core GitHub Workflow Manager
 
-Orchestrates the Generate-Verify loop with AI agents and human oversight.
-Integrates with GitHub MCP for seamless repository management.
+Coordinates AI agents and human collaborators through the
+Generate-Verify workflow for team-based development.
 """
 
 import json
