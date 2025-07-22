@@ -597,8 +597,10 @@ def cmd_memory(manager: WorkflowManager, args) -> int:
     if not platform.memory.store:
         print("No patterns learned yet")
         return 0
-    for k, v in platform.memory.store.items():
-        print(f"{k}: {v}")
+    for repo, data in platform.memory.store.items():
+        print(f"Repository: {repo}")
+        for k, v in data.items():
+            print(f"  {k}: {v}")
     return 0
 
 

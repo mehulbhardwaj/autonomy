@@ -94,4 +94,5 @@ jobs:
           pytest -o addopts='' tests/test_planning_workflow.py -q
           pytest -o addopts='' tests/test_openrouter.py -q
           pytest -o addopts='' tests/test_cli_planning.py -q
+          pytest -o addopts='' tests/test_mem0_client.py -q
 
