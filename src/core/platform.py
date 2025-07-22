@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Type
 
+from ..llm.openrouter import ModelSelector, OpenRouterClient
 from .workflow import BaseWorkflow
 
 
@@ -19,16 +20,6 @@ class Mem0Client:  # pragma: no cover - simple stub
         return True
 
 
-class OpenRouterClient:  # pragma: no cover - simple stub
-    """Return simple echo responses for tests."""
-
-    def complete(self, messages):
-        if not messages:
-            return ""
-        content = messages[-1].get("content", "")
-        return f"LLM:{content}"
-
-
 class GitHubTools:  # pragma: no cover - simple stub
     def get_issue(self, issue_number: int) -> dict:
         return {}
@@ -42,16 +33,22 @@ class SlackTools:  # pragma: no cover - simple stub
 class AutonomyPlatform:
     """Shared foundation for all workflows."""
 
-    def __init__(self):
+    def __init__(
+        self, api_key: str | None = None, model_selector: ModelSelector | None = None
+    ):
         self.memory = Mem0Client()
-        self.llm = OpenRouterClient()
+        self.llm = OpenRouterClient(api_key=api_key)
+        self.model_selector = model_selector or ModelSelector()
         self.github = GitHubTools()
         self.slack = SlackTools()
 
     def create_workflow(self, workflow_class: Type[BaseWorkflow]) -> BaseWorkflow:
-        return workflow_class(
-            memory=self.memory,
-            llm=self.llm,
-            github=self.github,
-            slack=self.slack,
-        )
+        kwargs = {
+            "memory": self.memory,
+            "llm": self.llm,
+            "github": self.github,
+            "slack": self.slack,
+        }
+        if "model_selector" in workflow_class.__init__.__code__.co_varnames:
+            kwargs["model_selector"] = self.model_selector
+        return workflow_class(**kwargs)
