@@ -27,3 +27,18 @@ def test_models():
     assert issue.title == "t"
     assert state.issue_id == "1"
     assert "priority_label" in cfg.ranking_weights
+
+
+class DummyWorkflowSelector(BaseWorkflow):
+    def __init__(self, memory, llm, github, slack, model_selector):
+        self.injected = model_selector
+        super().__init__(memory, llm, github, slack)
+
+    def _build_graph(self):
+        return {}
+
+
+def test_create_workflow_injects_model_selector():
+    platform = AutonomyPlatform()
+    wf = platform.create_workflow(DummyWorkflowSelector)
+    assert wf.injected is platform.model_selector
