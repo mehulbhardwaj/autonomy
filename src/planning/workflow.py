@@ -12,10 +12,17 @@ class PlanningWorkflow(BaseWorkflow):
     """Simplified planning workflow."""
 
     def __init__(
-        self, memory, llm, github, slack, config: PlanningConfig | None = None
+        self,
+        memory,
+        llm,
+        github,
+        slack,
+        config: PlanningConfig | None = None,
+        model_selector=None,
     ):
         self.config = config or PlanningConfig()
         self.ranking = RankingEngine()
+        self.model_selector = model_selector
         super().__init__(memory, llm, github, slack)
 
     # ------------------------------------------------------------------
@@ -36,7 +43,16 @@ class PlanningWorkflow(BaseWorkflow):
         title = state.get("title", "")
         context = self.memory.search(f"similar:{title}")
         prompt = f"Analyze {title}. Context: {context}"
-        analysis = self.llm.complete([{"role": "user", "content": prompt}])
+        models = (
+            self.model_selector.get("analysis")
+            if self.model_selector
+            else ["openai/gpt-4o"]
+        )
+        analysis = self.llm.complete_with_fallback(
+            [{"role": "user", "content": prompt}],
+            models=models,
+            operation="analysis",
+        )
         state["analysis"] = analysis or f"analysis of {title}"
         return state
 
@@ -52,8 +68,15 @@ class PlanningWorkflow(BaseWorkflow):
     def decompose(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Break down work using LLM and store in memory."""
         analysis = state.get("analysis", "")
-        text = self.llm.complete(
-            [{"role": "user", "content": f"Decompose: {analysis}"}]
+        models = (
+            self.model_selector.get("decomposition")
+            if self.model_selector
+            else ["openai/gpt-4o"]
+        )
+        text = self.llm.complete_with_fallback(
+            [{"role": "user", "content": f"Decompose: {analysis}"}],
+            models=models,
+            operation="decomposition",
         )
         tasks = [t.strip() for t in text.split(";") if t.strip()] or ["task1"]
         state["tasks"] = tasks
@@ -82,7 +105,16 @@ class PlanningWorkflow(BaseWorkflow):
     def plan(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Generate final plan description."""
         tasks = ", ".join(state.get("tasks", []))
-        plan = self.llm.complete([{"role": "user", "content": f"Plan for: {tasks}"}])
+        models = (
+            self.model_selector.get("planning")
+            if self.model_selector
+            else ["openai/gpt-4o"]
+        )
+        plan = self.llm.complete_with_fallback(
+            [{"role": "user", "content": f"Plan for: {tasks}"}],
+            models=models,
+            operation="planning",
+        )
         state["plan"] = plan or "basic plan"
         return state
 
