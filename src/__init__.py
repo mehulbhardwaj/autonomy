@@ -39,6 +39,7 @@ from .slack import (
 )
 from .tasks.backlog_doctor import BacklogDoctor
 from .tasks.task_manager import TaskManager
+from .tools import GitHubTools, MemoryTools, SlackTools, ToolRegistry
 
 __version__ = "0.1.1"
 __author__ = "Mehul Bhardwaj"
@@ -86,6 +87,10 @@ __all__ = [
     "SystemNotifier",
     "NotificationTemplates",
     "NotificationScheduler",
+    "ToolRegistry",
+    "GitHubTools",
+    "SlackTools",
+    "MemoryTools",
     "verify_installation",
     "check_for_updates",
     "create_app",
