@@ -72,7 +72,7 @@ Changelog = "https://github.com/mehulbhardwaj/autonomy/blob/main/CHANGELOG.md"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*", "autonomy*"]
+include = ["src*"]
 
 [tool.black]
 line-length = 88
@@ -141,7 +141,6 @@ omit = [
     "src/core/config.py",
     "src/core/secret_vault.py",
     "src/github/pat_scopes.py",
-    "src/planning/*",
     "src/slack/*",
     "src/tasks/*",
 ]
