@@ -25,8 +25,12 @@ class Mem0Client:  # pragma: no cover - uses real Mem0 backend
                 "config": {"model": FakeEmbeddings(size=10)},
             },
             "vector_store": {
-                "provider": "faiss",
-                "config": {"collection_name": "mem0", "embedding_model_dims": 10},
+                "provider": "qdrant",
+                "config": {
+                    "collection_name": "mem0",
+                    "embedding_model_dims": 10,
+                    "path": ":memory:",
+                },
             },
             "llm": {"provider": "openai", "config": {"api_key": "sk-fake"}},
         }

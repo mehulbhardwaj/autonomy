@@ -228,7 +228,7 @@ class PlanningConfig:
 class AutonomyPlatform:
     def __init__(self):
         # Shared foundation - simple and elegant
-        self.memory = Mem0Client()  # backed by real Mem0
+        self.memory = Mem0Client()  # backed by Mem0 using an in-memory Qdrant store
         self.llm = OpenRouterClient()
         self.github = GitHubTools()
         self.slack = SlackTools()
