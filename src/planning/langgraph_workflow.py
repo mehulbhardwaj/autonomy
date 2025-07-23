@@ -35,6 +35,7 @@ class LangGraphPlanningWorkflow(PlanningWorkflow):
         graph.add_node("route", self.route)
         graph.add_node("assign", self.assign)
         graph.add_node("plan", self.plan)
+        graph.add_node("get_human_approval", self.get_human_approval)
         graph.add_node("approve", self.approve)
 
         graph.set_entry_point("analyze_issue")
@@ -43,7 +44,8 @@ class LangGraphPlanningWorkflow(PlanningWorkflow):
         graph.add_edge("decompose", "route")
         graph.add_edge("route", "assign")
         graph.add_edge("assign", "plan")
-        graph.add_edge("plan", "approve")
+        graph.add_edge("plan", "get_human_approval")
+        graph.add_edge("get_human_approval", "approve")
         graph.set_finish_point("approve")
 
         return graph.compile()

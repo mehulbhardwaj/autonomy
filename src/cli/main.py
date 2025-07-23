@@ -547,6 +547,8 @@ def cmd_plan(manager: WorkflowManager, args) -> int:
     from ..planning.langgraph_workflow import LangGraphPlanningWorkflow
 
     issue = manager.issue_manager.get_issue(args.issue) or {}
+    issue["issue_id"] = str(args.issue)
+    issue.setdefault("repository", "default")
     platform = AutonomyPlatform()
     wf = platform.create_workflow(LangGraphPlanningWorkflow)
     result = wf.run(issue)
