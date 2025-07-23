@@ -43,3 +43,28 @@ def test_audit_logging(tmp_path: Path) -> None:
     assert entry["details"]["tool"] == "dummy"
     assert entry["details"]["agent"] == "a2"
     assert entry["details"]["success"] is True
+
+
+def test_admin_permission_and_error_logging(tmp_path: Path) -> None:
+    registry = ToolRegistry(audit_logger=AuditLogger(tmp_path / "audit.log"))
+
+    class FailingTool:
+        def do(self) -> None:
+            raise RuntimeError("boom")
+
+    registry.register_tool("failing", FailingTool(), permission="admin")
+    agent_write = DummyAgent("aw", ["write"])
+    with pytest.raises(PermissionError):
+        registry.execute_tool("failing", "do", agent=agent_write)
+
+    agent_admin = DummyAgent("aa", ["admin"])
+    with pytest.raises(RuntimeError):
+        registry.execute_tool("failing", "do", agent=agent_admin)
+
+    logs = list(registry.audit_logger.iter_logs())
+    assert len(logs) == 1
+    entry = logs[0]
+    assert entry["details"]["tool"] == "failing"
+    assert entry["details"]["agent"] == "aa"
+    assert entry["details"]["success"] is False
+    assert "boom" in entry["details"]["error"]

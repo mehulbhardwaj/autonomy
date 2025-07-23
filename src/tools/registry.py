@@ -31,8 +31,11 @@ class ToolRegistry:
         if name not in self._tools:
             raise KeyError(f"Unknown tool: {name}")
         required = self._permissions.get(name, "read")
-        agent_perms = getattr(agent, "permissions", [])
-        if required == "write" and not ({"write", "admin"} & set(agent_perms)):
+        agent_perms = set(getattr(agent, "permissions", []))
+        levels = {"read": 0, "write": 1, "admin": 2}
+        req_level = levels.get(required, 0)
+        agent_level = max((levels.get(p, 0) for p in agent_perms), default=-1)
+        if agent_level < req_level:
             raise PermissionError(f"Agent lacks permission for {name}")
 
         tool = self._tools[name]
