@@ -1,3 +1,6 @@
+import click
+import pytest
+
 from src.core.platform import AutonomyPlatform
 from src.planning.langgraph_workflow import LangGraphPlanningWorkflow
 
@@ -11,7 +14,10 @@ def test_langgraph_workflow_run():
         "created_at": "2025-07-10T00:00:00Z",
         "repository": "default",
     }
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(click, "confirm", lambda *a, **k: True)
     result = wf.run(issue)
+    monkeypatch.undo()
     data = result.state.data
     assert result.success
     assert data["analysis"].startswith("LLM:")

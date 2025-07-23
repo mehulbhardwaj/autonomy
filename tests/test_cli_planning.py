@@ -1,6 +1,8 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 from src.cli.main import cmd_explain, cmd_memory, cmd_plan, cmd_tune
 from src.core.config import WorkflowConfig
 
@@ -29,7 +31,12 @@ class DummyManager:
 def test_cmd_plan(tmp_path: Path):
     manager = DummyManager(tmp_path)
     args = SimpleNamespace(issue=42)
+    from src.cli import main as cli_main
+
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(cli_main.click, "confirm", lambda *a, **k: True)
     assert cmd_plan(manager, args) == 0
+    monkeypatch.undo()
 
 
 def test_cmd_explain(tmp_path: Path, capsys):

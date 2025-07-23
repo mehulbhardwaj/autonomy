@@ -35,6 +35,7 @@ class PlanningWorkflow(BaseWorkflow):
             "route": self.route,
             "assign": self.assign,
             "plan": self.plan,
+            "get_approval": self.get_human_approval,
             "approve": self.approve,
         }
 
@@ -130,15 +131,26 @@ class PlanningWorkflow(BaseWorkflow):
         state["plan"] = plan or "basic plan"
         return state
 
+    def get_human_approval(self, state: Dict[str, Any]) -> Dict[str, Any]:
+        """Prompt the user for approval."""
+        import click
+
+        approved = click.confirm("Approve generated plan?", default=True)
+        state["approved"] = approved
+        return state
+
     def approve(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Record approval and learn outcome."""
-        state["approved"] = True
-        self.memory.add(
-            {
-                "last_plan": state.get("plan", ""),
-                "repository": state.get("repository", "default"),
-            }
-        )
+        if "approved" not in state:
+            state = self.get_human_approval(state)
+
+        if state.get("approved"):
+            self.memory.add(
+                {
+                    "last_plan": state.get("plan", ""),
+                    "repository": state.get("repository", "default"),
+                }
+            )
         return state
 
     def learn_from_override(
