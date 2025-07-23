@@ -3,14 +3,21 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from ..audit.logger import AuditLogger
 from ..audit.undo import UndoManager
+from ..core.secret_vault import SecretVault
 from ..github.issue_manager import IssueManager
 from ..tasks.backlog_doctor import BacklogDoctor
 from ..tasks.task_manager import TaskManager
+
+templates = Jinja2Templates(
+    directory=str(Path(__file__).resolve().parent.parent / "templates")
+)
 
 
 class UpdateTaskRequest(BaseModel):
@@ -22,6 +29,7 @@ class UpdateTaskRequest(BaseModel):
 def create_app(
     issue_manager: IssueManager,
     audit_logger: Optional[AuditLogger] = None,
+    vault: Optional["SecretVault"] = None,
 ) -> FastAPI:
     """Return a FastAPI app wired with core managers."""
 
@@ -37,6 +45,7 @@ def create_app(
     backlog_doctor = BacklogDoctor(issue_manager)
     audit_logger = audit_logger or AuditLogger(Path("audit.log"))
     undo_manager = UndoManager(issue_manager, audit_logger)
+    vault = vault or SecretVault()
 
     app = FastAPI(title="Autonomy API", version="1.0")
 
@@ -89,5 +98,35 @@ def create_app(
         if undo_manager.undo(hash_value):
             return {"success": True}
         raise HTTPException(status_code=404, detail="Operation not found")
+
+    # ---------------------------- Settings -----------------------------
+    @app.get("/settings", response_class=HTMLResponse)
+    def settings_page(request: Request):
+        values = {
+            "openrouter_api_key": vault.get_secret("openrouter_api_key") or "",
+            "mem0_url": vault.get_secret("mem0_url") or "",
+            "github_token": vault.get_secret("github_token") or "",
+            "slack_token": vault.get_secret("slack_token") or "",
+        }
+        return templates.TemplateResponse(
+            "settings.html", {"request": request, "values": values}
+        )
+
+    @app.post("/api/v1/settings")
+    def update_settings(
+        openrouter_api_key: str = Form(""),
+        mem0_url: str = Form(""),
+        github_token: str = Form(""),
+        slack_token: str = Form(""),
+    ):
+        if openrouter_api_key:
+            vault.set_secret("openrouter_api_key", openrouter_api_key)
+        if mem0_url:
+            vault.set_secret("mem0_url", mem0_url)
+        if github_token:
+            vault.set_secret("github_token", github_token)
+        if slack_token:
+            vault.set_secret("slack_token", slack_token)
+        return RedirectResponse("/settings", status_code=303)
 
     return app

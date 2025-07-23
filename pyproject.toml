@@ -32,6 +32,7 @@ dependencies = [
     "requests>=2.25.0",
     "httpx>=0.25.0,<0.28",
     "fastapi>=0.111.0",
+    "python-multipart>=0.0.5",
     "click>=8.0.0",
     "pydantic>=2.7.4",
     "langgraph>=0.5.4",
