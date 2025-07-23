@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Settings</title>
+</head>
+<body>
+    <h1>Settings</h1>
+    <form method="post" action="/api/v1/settings">
+        <label>OpenRouter API Key
+            <input type="text" name="openrouter_api_key" value="{{ values.openrouter_api_key }}" />
+        </label><br/>
+        <label>Mem0 URL
+            <input type="text" name="mem0_url" value="{{ values.mem0_url }}" />
+        </label><br/>
+        <label>GitHub Token
+            <input type="text" name="github_token" value="{{ values.github_token }}" />
+        </label><br/>
+        <label>Slack Token
+            <input type="text" name="slack_token" value="{{ values.slack_token }}" />
+        </label><br/>
+        <button type="submit">Save</button>
+    </form>
+</body>
+</html>
