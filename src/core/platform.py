@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections import OrderedDict
 from typing import Any, Type
 
-from mem0.memory.main import Memory
 from langchain_community.embeddings import FakeEmbeddings
+from mem0.memory.main import Memory
 
 from ..llm.openrouter import ModelSelector, OpenRouterClient
 from .workflow import BaseWorkflow
@@ -13,7 +13,9 @@ from .workflow import BaseWorkflow
 class Mem0Client:  # pragma: no cover - uses real Mem0 backend
     """Repository-scoped memory backed by mem0."""
 
-    def __init__(self, max_entries: int = 50, config: dict[str, Any] | None = None) -> None:
+    def __init__(
+        self, max_entries: int = 50, config: dict[str, Any] | None = None
+    ) -> None:
         self.max_entries = max_entries
         self.store: dict[str, OrderedDict[str, str]] = {}
         self._id_map: dict[tuple[str, str], str] = {}
@@ -66,7 +68,9 @@ class Mem0Client:  # pragma: no cover - uses real Mem0 backend
                 metadata={"repository": repository, "key": key},
                 infer=False,
             )
-            mem_id = res.get("results", [{}])[0].get("id") if isinstance(res, dict) else None
+            mem_id = (
+                res.get("results", [{}])[0].get("id") if isinstance(res, dict) else None
+            )
             if mem_id:
                 self._id_map[(repository, key)] = mem_id
             repo_store[key] = value
