@@ -1,19 +1,34 @@
 from __future__ import annotations
 
 from collections import OrderedDict
-from typing import Type
+from typing import Any, Type
+
+from mem0.memory.main import Memory
+from langchain_community.embeddings import FakeEmbeddings
 
 from ..llm.openrouter import ModelSelector, OpenRouterClient
 from .workflow import BaseWorkflow
 
 
-class Mem0Client:  # pragma: no cover - simple stub
-    """Minimal repository-scoped memory store for tests."""
+class Mem0Client:  # pragma: no cover - uses real Mem0 backend
+    """Repository-scoped memory backed by mem0."""
 
-    def __init__(self, max_entries: int = 50) -> None:
+    def __init__(self, max_entries: int = 50, config: dict[str, Any] | None = None) -> None:
         self.max_entries = max_entries
-        # Each repository gets its own ordered store of key -> value pairs
         self.store: dict[str, OrderedDict[str, str]] = {}
+        self._id_map: dict[tuple[str, str], str] = {}
+        default_config = {
+            "embedder": {
+                "provider": "langchain",
+                "config": {"model": FakeEmbeddings(size=10)},
+            },
+            "vector_store": {
+                "provider": "faiss",
+                "config": {"collection_name": "mem0", "embedding_model_dims": 10},
+            },
+            "llm": {"provider": "openai", "config": {"api_key": "sk-fake"}},
+        }
+        self.backend = Memory.from_config(config or default_config)
 
     def _get_repo_store(self, repo: str) -> OrderedDict[str, str]:
         if repo not in self.store:
@@ -23,6 +38,13 @@ class Mem0Client:  # pragma: no cover - simple stub
     def search(self, query: str, filter_metadata: dict | None = None) -> str:
         """Return stored value filtered by repository."""
         repo = filter_metadata.get("repository") if filter_metadata else "default"
+        mem_id = self._id_map.get((repo, query))
+        if mem_id:
+            try:
+                result = self.backend.get(mem_id)
+                return result.get("memory", "") if result else ""
+            except Exception:
+                pass
         return self.store.get(repo, {}).get(query, "")
 
     def add(self, data: dict[str, str]) -> bool:
@@ -31,7 +53,22 @@ class Mem0Client:  # pragma: no cover - simple stub
         repo_store = self._get_repo_store(repository)
         for key, value in data.items():
             if len(repo_store) >= self.max_entries:
-                repo_store.popitem(last=False)
+                old_key, _ = repo_store.popitem(last=False)
+                old_id = self._id_map.pop((repository, old_key), None)
+                if old_id:
+                    try:
+                        self.backend.delete(old_id)
+                    except Exception:
+                        pass
+            res = self.backend.add(
+                value,
+                run_id=repository,
+                metadata={"repository": repository, "key": key},
+                infer=False,
+            )
+            mem_id = res.get("results", [{}])[0].get("id") if isinstance(res, dict) else None
+            if mem_id:
+                self._id_map[(repository, key)] = mem_id
             repo_store[key] = value
         return True
 
