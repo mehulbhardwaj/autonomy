@@ -475,17 +475,44 @@ def cmd_status(manager: WorkflowManager, args) -> int:
 
 def cmd_next(manager: WorkflowManager, args) -> int:
     """Return the next best task."""
-    from ..tasks.task_manager import TaskManager
+    from ..core.platform import AutonomyPlatform
+    from ..planning.workflow import PlanningWorkflow
 
-    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
-    issue, breakdown = tm.get_next_task(
-        assignee=args.assignee, team=args.team, explain=True
-    )
-    if not issue:
+    issues = manager.issue_manager.list_issues(state="open")
+    filtered = []
+    for issue in issues:
+        labels = [
+            label["name"] if isinstance(label, dict) and "name" in label else label
+            for label in issue.get("labels", [])
+        ]
+        if args.assignee:
+            found = False
+            if (
+                issue.get("assignee")
+                and issue["assignee"].get("login") == args.assignee
+            ):
+                found = True
+            for a in issue.get("assignees", []) or []:
+                if a and a.get("login") == args.assignee:
+                    found = True
+            if not found:
+                continue
+        if args.team and not any(
+            lbl.lower() == f"team:{args.team.lower()}" for lbl in labels
+        ):
+            continue
+        filtered.append(issue)
+
+    platform = AutonomyPlatform()
+    wf = platform.create_workflow(PlanningWorkflow)
+    ranked = wf.rank_issues(filtered, explain=True)
+    if not ranked:
         print("No tasks found")
         return 0
 
-    print(f"Next task: #{issue['number']} - {issue['title']}")
+    issue = ranked[0]
+    print(f"Next task: #{issue.get('number')} - {issue.get('title')}")
+    breakdown = issue.get("ranking_reason", {})
     if breakdown:
         print(
             f"  Priority score: {breakdown.get('priority')} age_penalty={breakdown.get('age_penalty')}"

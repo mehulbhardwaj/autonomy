@@ -172,6 +172,28 @@ class PlanningWorkflow(BaseWorkflow):
             }
         )
 
+    def rank_issues(
+        self, issues: list[dict[str, Any]], *, explain: bool = False
+    ) -> list[dict[str, Any]]:
+        """Return issues scored and sorted by priority."""
+        ranked: list[dict[str, Any]] = []
+        for issue in issues:
+            result = self.ranking.score_issue(issue, explain=explain)
+            if explain:
+                score, breakdown = result
+            else:
+                score = result
+                breakdown = None
+            if score == float("-inf"):
+                continue
+            item = issue.copy()
+            item["priority_score"] = score
+            if explain:
+                item["ranking_reason"] = breakdown
+            ranked.append(item)
+        ranked.sort(key=lambda x: x["priority_score"], reverse=True)
+        return ranked
+
     # Public API -------------------------------------------------------
     def run(self, issue: Dict[str, Any]) -> WorkflowResult:
         result = self.execute(issue)

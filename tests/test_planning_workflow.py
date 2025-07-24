@@ -43,3 +43,23 @@ def test_security_routing_and_assignment():
     data = result.state.data
     assert data["requires_security_review"]
     assert data["assignee"] == "bob"
+
+
+def test_rank_issues():
+    platform = AutonomyPlatform()
+    wf = platform.create_workflow(PlanningWorkflow)
+    issues = [
+        {
+            "number": 1,
+            "labels": ["priority-low"],
+            "created_at": "2025-07-10T00:00:00Z",
+        },
+        {
+            "number": 2,
+            "labels": ["priority-high"],
+            "created_at": "2025-07-10T00:00:00Z",
+        },
+    ]
+    ranked = wf.rank_issues(issues)
+    assert [i["number"] for i in ranked] == [2, 1]
+    assert "priority_score" in ranked[0]
