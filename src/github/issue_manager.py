@@ -305,6 +305,40 @@ class IssueManager:
         except Exception:
             return False
 
+    def update_issue(
+        self,
+        issue_number: int,
+        *,
+        title: Optional[str] = None,
+        body: Optional[str] = None,
+        labels: Optional[List[str]] = None,
+    ) -> bool:
+        """Update basic fields on an issue."""
+        payload: Dict[str, Any] = {}
+        if title is not None:
+            payload["title"] = title
+        if body is not None:
+            payload["body"] = body
+        if labels is not None:
+            payload["labels"] = labels
+        if not payload:
+            return False
+        try:
+            response = requests.patch(
+                f"{self.base_url}/issues/{issue_number}",
+                headers=self.headers,
+                json=payload,
+            )
+            success = response.status_code == 200
+            if success and self.audit_logger:
+                self.audit_logger.log(
+                    "update_issue",
+                    {k: payload[k] for k in payload.keys()},
+                )
+            return success
+        except Exception:
+            return False
+
     def assign_issue(self, issue_number: int, assignees: List[str]) -> bool:
         """Assign users to an issue."""
         try:
