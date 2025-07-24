@@ -64,7 +64,7 @@ def test_cmd_memory(tmp_path: Path, capsys, monkeypatch):
             self.store = {"default": {"k": "v"}}
 
     class DummyPlatform:
-        def __init__(self):
+        def __init__(self, *_, **__):
             self.memory = DummyMem()
 
     monkeypatch.setattr("src.core.platform.AutonomyPlatform", DummyPlatform)

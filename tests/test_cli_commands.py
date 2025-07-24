@@ -159,6 +159,9 @@ def test_cmd_next(monkeypatch, tmp_path: Path):
             ]
 
     class DummyPlatform:
+        def __init__(self, *_, **__):
+            pass
+
         def create_workflow(self, _):
             return DummyWF()
 
@@ -194,6 +197,9 @@ def test_cmd_next_none(monkeypatch, tmp_path: Path, capsys):
             return []
 
     class DummyPlatform:
+        def __init__(self, *_, **__):
+            pass
+
         def create_workflow(self, _):
             return DummyWF()
 
