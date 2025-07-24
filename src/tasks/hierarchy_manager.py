@@ -155,3 +155,27 @@ class HierarchyManager:
         for r in sorted(roots):
             _walk(r, 0)
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    def create_tasklist_hierarchy(
+        self, parent: IssueNode, children: List[IssueNode]
+    ) -> None:
+        """Update parent issue body with a tasklist of its children."""
+        if not children:
+            return
+        issue = self.issue_manager.get_issue(parent.number)
+        body = issue.get("body", parent.body) if issue else parent.body
+        body = body.split("## Sub-tasks")[0].rstrip()
+        items = [f"- [ ] #{c.number} {c.title}" for c in children]
+        new_body = f"{body}\n\n## Sub-tasks\n" + "\n".join(items)
+        self.issue_manager.update_issue(parent.number, body=new_body)
+
+    def maintain_hierarchy(self) -> Dict[str, List[int]]:
+        """Ensure hierarchy and update tasklists."""
+        nodes = self.build_tree()
+        created = self.ensure_parents(nodes)
+        orphans = [o.number for o in self.warn_on_orphans(nodes)]
+        for node in nodes.values():
+            if node.children:
+                self.create_tasklist_hierarchy(node, [nodes[c] for c in node.children])
+        return {"created": created, "orphans": orphans}

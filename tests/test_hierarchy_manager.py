@@ -15,6 +15,21 @@ class DummyIssueManager:
         self.created.append((num, issue))
         return num
 
+    def get_issue(self, issue_number):
+        return next((i for i in self._issues if i["number"] == issue_number), None)
+
+    def update_issue(self, issue_number, *, title=None, body=None, labels=None):
+        for issue in self._issues:
+            if issue["number"] == issue_number:
+                if body is not None:
+                    issue["body"] = body
+                if title is not None:
+                    issue["title"] = title
+                if labels is not None:
+                    issue["labels"] = labels
+        self.updated = (issue_number, body)
+        return True
+
 
 def _make_issue(num, label, body=""):
     return {
@@ -104,3 +119,34 @@ def test_warn_on_orphans_below_threshold():
     nodes = hm.build_tree()
     orphans = hm.warn_on_orphans(nodes)
     assert orphans == []
+
+
+def test_create_tasklist_hierarchy():
+    issues = [
+        _make_issue(1, "epic"),
+        _make_issue(2, "task", "Parent: #1"),
+    ]
+    dummy = DummyIssueManager(issues)
+    hm = HierarchyManager(dummy)
+    nodes = hm.build_tree()
+    parent = nodes[1]
+    child = nodes[2]
+    hm.create_tasklist_hierarchy(parent, [child])
+    assert dummy.updated[0] == 1
+    assert "#2" in dummy.updated[1]
+
+
+def test_maintain_hierarchy_creates_parents_and_updates_tasklists():
+    issues = [
+        _make_issue(1, "epic"),
+        _make_issue(2, "task", "Parent: #1"),
+        _make_issue(3, "task"),
+    ]
+    dummy = DummyIssueManager(issues)
+    hm = HierarchyManager(dummy, orphan_threshold=1)
+    result = hm.maintain_hierarchy()
+    # New feature created for issue 3
+    assert result["created"]
+    assert dummy.created[0][1].labels == ["feature"]
+    # Tasklist updated for issue 1
+    assert dummy.updated[0] == 1
