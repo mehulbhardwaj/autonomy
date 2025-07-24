@@ -138,16 +138,31 @@ def test_cmd_status(tmp_path: Path):
 
 def test_cmd_next(monkeypatch, tmp_path: Path):
     manager = DummyManager(tmp_path)
+    manager.issue_manager.list_issues = lambda state="open": [
+        {
+            "number": 7,
+            "title": "task",
+            "labels": [],
+            "created_at": "2025-07-10T00:00:00Z",
+        }
+    ]
 
-    class DummyTM:
-        def get_next_task(self, assignee=None, team=None, explain=False):
-            if explain:
-                return {"number": 7, "title": "task"}, {"priority": 3, "age_penalty": 0}
-            return {"number": 7, "title": "task"}
+    class DummyWF:
+        def rank_issues(self, issues, explain=False):
+            return [
+                {
+                    "number": 7,
+                    "title": "task",
+                    "priority_score": 5,
+                    "ranking_reason": {"priority": 3, "age_penalty": 0},
+                }
+            ]
 
-    monkeypatch.setattr(
-        "src.tasks.task_manager.TaskManager", lambda *a, **kw: DummyTM()
-    )
+    class DummyPlatform:
+        def create_workflow(self, _):
+            return DummyWF()
+
+    monkeypatch.setattr("src.core.platform.AutonomyPlatform", DummyPlatform)
     args = SimpleNamespace(assignee=None, team=None)
     assert cmd_next(manager, args) == 0
 
@@ -172,14 +187,17 @@ def test_cmd_update(monkeypatch, tmp_path: Path):
 
 def test_cmd_next_none(monkeypatch, tmp_path: Path, capsys):
     manager = DummyManager(tmp_path)
+    manager.issue_manager.list_issues = lambda state="open": []
 
-    class DummyTM:
-        def get_next_task(self, assignee=None, team=None, explain=False):
-            return (None, {}) if explain else None
+    class DummyWF:
+        def rank_issues(self, issues, explain=False):
+            return []
 
-    monkeypatch.setattr(
-        "src.tasks.task_manager.TaskManager", lambda *a, **kw: DummyTM()
-    )
+    class DummyPlatform:
+        def create_workflow(self, _):
+            return DummyWF()
+
+    monkeypatch.setattr("src.core.platform.AutonomyPlatform", DummyPlatform)
     args = SimpleNamespace(assignee=None, team=None)
     assert cmd_next(manager, args) == 0
     out = capsys.readouterr().out
