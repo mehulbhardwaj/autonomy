@@ -50,6 +50,9 @@ def test_cmd_breakdown(monkeypatch, tmp_path: Path, capsys):
             return state
 
     class DummyPlatform:
+        def __init__(self, *_, **__):
+            pass
+
         def create_workflow(self, _):
             return DummyWF()
 

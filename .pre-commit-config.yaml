@@ -22,4 +22,6 @@ repos:
         name: run tests
         entry: pytest
         language: system
+        env:
+          MEM0_TELEMETRY: "False"
         pass_filenames: false
