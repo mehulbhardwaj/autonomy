@@ -26,6 +26,7 @@ from .github.token_storage import (
     refresh_token_if_needed,
     validate_token,
 )
+from .metrics import MetricsCollector, MetricsStorage
 from .slack import (
     BacklogDoctorNotifier,
     MetricsDashboard,
@@ -91,6 +92,8 @@ __all__ = [
     "GitHubTools",
     "SlackTools",
     "MemoryTools",
+    "MetricsCollector",
+    "MetricsStorage",
     "verify_installation",
     "check_for_updates",
     "create_app",
