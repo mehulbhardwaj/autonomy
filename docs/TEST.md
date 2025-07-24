@@ -24,7 +24,7 @@
 
 ## 2. Test Architecture (Core)
 
-- This document covers only the open source, GPLv3-licensed core testing strategy. Proprietary/enterprise features are out of scope and will be detailed in the pro TEST doc.
+- This document covers only the open source, GPLv3-or-later licensed core testing strategy. Proprietary/enterprise features are out of scope and will be detailed in the pro TEST doc.
 
 ### Test Pyramid Structure
 ```

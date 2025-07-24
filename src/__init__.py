@@ -45,7 +45,7 @@ from .tools import GitHubTools, MemoryTools, SlackTools, ToolRegistry
 __version__ = "0.1.1"
 __author__ = "Mehul Bhardwaj"
 __email__ = "mehul@example.com"
-__license__ = "MIT"
+__license__ = "GPL-3.0-or-later"
 
 from .utils.distribution import check_for_updates, verify_installation
 
