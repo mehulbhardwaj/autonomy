@@ -100,4 +100,5 @@ jobs:
           pytest -o addopts='' tests/test_mem0_client.py -q
           pytest -o addopts='' tests/test_tool_registry.py -q
           pytest -o addopts='' tests/test_hierarchy_manager.py -q
+          pytest -o addopts='' tests/test_metrics.py -q
 
