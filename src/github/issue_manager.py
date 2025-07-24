@@ -305,6 +305,24 @@ class IssueManager:
         except Exception:
             return False
 
+    def assign_issue(self, issue_number: int, assignees: List[str]) -> bool:
+        """Assign users to an issue."""
+        try:
+            response = requests.patch(
+                f"{self.base_url}/issues/{issue_number}",
+                headers=self.headers,
+                json={"assignees": assignees},
+            )
+            success = response.status_code == 200
+            if success and self.audit_logger:
+                self.audit_logger.log(
+                    "assign_issue",
+                    {"issue": issue_number, "assignees": assignees},
+                )
+            return success
+        except Exception:
+            return False
+
     def add_comment(self, issue_number: int, comment: str) -> bool:
         """Add a comment to an issue."""
         try:
