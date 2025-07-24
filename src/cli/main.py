@@ -170,6 +170,17 @@ Environment Variables:
 
     subparsers.add_parser("memory", help="Show Planning Agent learning patterns")
 
+    subparsers.add_parser("rerank", help="Re-evaluate priority ranking for open issues")
+
+    assign_parser = subparsers.add_parser("assign", help="Assign an issue to a user")
+    assign_parser.add_argument("issue", type=int, help="Issue number")
+    assign_parser.add_argument("--to", required=True, help="Username")
+
+    breakdown_parser = subparsers.add_parser(
+        "breakdown", help="Decompose an issue into tasks"
+    )
+    breakdown_parser.add_argument("issue", type=int, help="Issue number")
+
     # Audit command
     audit_parser = subparsers.add_parser("audit", help="Audit related commands")
     audit_sub = audit_parser.add_subparsers(dest="audit_cmd")
@@ -334,6 +345,12 @@ Environment Variables:
             return cmd_explain(manager, args)
         elif args.command == "tune":
             return cmd_tune(manager, args)
+        elif args.command == "rerank":
+            return cmd_rerank(manager, args)
+        elif args.command == "assign":
+            return cmd_assign(manager, args)
+        elif args.command == "breakdown":
+            return cmd_breakdown(manager, args)
         elif args.command == "memory":
             return cmd_memory(manager, args)
         elif args.command == "doctor":
@@ -588,6 +605,45 @@ def cmd_tune(manager: WorkflowManager, args) -> int:
     data = {"weights": weights}
     cfg_path.write_text(yaml.safe_dump(data))
     print("✓ Configuration updated")
+    return 0
+
+
+def cmd_rerank(manager: WorkflowManager, args) -> int:
+    """Re-evaluate ranking for open issues."""
+    from ..tasks.task_manager import TaskManager
+
+    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    tasks = tm.list_tasks()
+    if not tasks:
+        print("No tasks found")
+        return 0
+    for issue in tasks:
+        score = tm.ranking.score_issue(issue)
+        print(f"#{issue['number']}: {issue['title']} score={score}")
+    return 0
+
+
+def cmd_assign(manager: WorkflowManager, args) -> int:
+    """Assign an issue to a user."""
+    if manager.issue_manager.assign_issue(args.issue, [args.to]):
+        print(f"\N{CHECK MARK} Assigned #{args.issue} to {args.to}")
+        return 0
+    print("Error: failed to assign issue")
+    return 1
+
+
+def cmd_breakdown(manager: WorkflowManager, args) -> int:
+    """Break down an issue using the Planning workflow."""
+    from ..core.platform import AutonomyPlatform
+    from ..planning.workflow import PlanningWorkflow
+
+    issue = manager.issue_manager.get_issue(args.issue) or {}
+    issue.setdefault("repository", "default")
+    platform = AutonomyPlatform()
+    wf = platform.create_workflow(PlanningWorkflow)
+    state = wf.decompose(issue)
+    for t in state.get("tasks", []):
+        print(f"- {t}")
     return 0
 
 
