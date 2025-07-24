@@ -20,7 +20,7 @@
 
 ## 2. Architectural Overview (Core)
 
-- This document covers only the open source, GPLv3-licensed core architecture. Proprietary/enterprise features are out of scope and will be detailed in the pro TECH doc.
+- This document covers only the open source, GPLv3-or-later licensed core architecture. Proprietary/enterprise features are out of scope and will be detailed in the pro TECH doc.
 
 ### System Architecture
 ```
@@ -758,4 +758,4 @@ autonomy serve --dev
 
 ---
 
-*This TECH doc is for the open source, GPLv3-licensed core only. For advanced, enterprise, and SaaS features, see the future pro TECH doc.*
+*This TECH doc is for the open source, GPLv3-or-later licensed core only. For advanced, enterprise, and SaaS features, see the future pro TECH doc.*
