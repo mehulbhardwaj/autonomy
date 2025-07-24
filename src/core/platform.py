@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import os
 from collections import OrderedDict
 from typing import Any, Type
 
 from langchain_community.embeddings import FakeEmbeddings
+from mem0.client.main import MemoryClient as RemoteMemoryClient
 from mem0.memory.main import Memory
 
 from ..llm.openrouter import ModelSelector, OpenRouterClient
+from ..tools.github import GitHubTools
+from ..tools.slack import SlackTools
 from .workflow import BaseWorkflow
 
 
@@ -34,7 +38,10 @@ class Mem0Client:  # pragma: no cover - uses real Mem0 backend
             },
             "llm": {"provider": "openai", "config": {"api_key": "sk-fake"}},
         }
-        self.backend = Memory.from_config(config or default_config)
+        if os.getenv("MEM0_API_KEY"):
+            self.backend = RemoteMemoryClient()
+        else:
+            self.backend = Memory.from_config(config or default_config)
 
     def _get_repo_store(self, repo: str) -> OrderedDict[str, str]:
         if repo not in self.store:
@@ -81,27 +88,39 @@ class Mem0Client:  # pragma: no cover - uses real Mem0 backend
         return True
 
 
-class GitHubTools:  # pragma: no cover - simple stub
-    def get_issue(self, issue_number: int) -> dict:
-        return {}
-
-
-class SlackTools:  # pragma: no cover - simple stub
-    def post_message(self, channel: str, text: str) -> bool:
-        return True
-
-
 class AutonomyPlatform:
     """Shared foundation for all workflows."""
 
     def __init__(
-        self, api_key: str | None = None, model_selector: ModelSelector | None = None
+        self,
+        api_key: str | None = None,
+        model_selector: ModelSelector | None = None,
+        github_token: str | None = None,
+        owner: str | None = None,
+        repo: str | None = None,
+        slack_token: str | None = None,
     ):
         self.memory = Mem0Client()
         self.llm = OpenRouterClient(api_key=api_key)
         self.model_selector = model_selector or ModelSelector()
-        self.github = GitHubTools()
-        self.slack = SlackTools()
+        if github_token and owner and repo:
+            from ..github.issue_manager import IssueManager
+
+            manager = IssueManager(github_token, owner, repo)
+            self.github = GitHubTools(manager)
+        else:
+            from ..github.issue_manager import IssueManager
+
+            self.github = GitHubTools(IssueManager("", "", ""))
+
+        if slack_token:
+            from ..slack.bot import SlackBot
+
+            self.slack = SlackTools(SlackBot(slack_token))
+        else:
+            from ..slack.bot import SlackBot
+
+            self.slack = SlackTools(SlackBot(""))
 
     def create_workflow(self, workflow_class: Type[BaseWorkflow]) -> BaseWorkflow:
         kwargs = {

@@ -503,7 +503,11 @@ def cmd_next(manager: WorkflowManager, args) -> int:
             continue
         filtered.append(issue)
 
-    platform = AutonomyPlatform()
+    platform = AutonomyPlatform(
+        github_token=manager.github_token,
+        owner=manager.owner,
+        repo=manager.repo,
+    )
     wf = platform.create_workflow(PlanningWorkflow)
     ranked = wf.rank_issues(filtered, explain=True)
     if not ranked:
@@ -571,6 +575,21 @@ def cmd_pin(manager: WorkflowManager, args) -> int:
 
     store = PinnedItemsStore()
     store.pin_item(f"{manager.owner}/{manager.repo}", str(args.issue))
+    from ..core.platform import AutonomyPlatform
+    from ..planning.workflow import PlanningWorkflow
+
+    platform = AutonomyPlatform(
+        github_token=manager.github_token,
+        owner=manager.owner,
+        repo=manager.repo,
+    )
+    wf = platform.create_workflow(PlanningWorkflow)
+    wf.learn_from_override(
+        str(args.issue),
+        {"pinned": False},
+        {"pinned": True},
+        repository="default",
+    )
     print(f"\N{CHECK MARK} Issue #{args.issue} pinned")
     return 0
 
@@ -581,6 +600,21 @@ def cmd_unpin(manager: WorkflowManager, args) -> int:
 
     store = PinnedItemsStore()
     store.unpin_item(f"{manager.owner}/{manager.repo}", str(args.issue))
+    from ..core.platform import AutonomyPlatform
+    from ..planning.workflow import PlanningWorkflow
+
+    platform = AutonomyPlatform(
+        github_token=manager.github_token,
+        owner=manager.owner,
+        repo=manager.repo,
+    )
+    wf = platform.create_workflow(PlanningWorkflow)
+    wf.learn_from_override(
+        str(args.issue),
+        {"pinned": True},
+        {"pinned": False},
+        repository="default",
+    )
     print(f"\N{CHECK MARK} Issue #{args.issue} unpinned")
     return 0
 
@@ -593,7 +627,11 @@ def cmd_plan(manager: WorkflowManager, args) -> int:
     issue = manager.issue_manager.get_issue(args.issue) or {}
     issue["issue_id"] = str(args.issue)
     issue.setdefault("repository", "default")
-    platform = AutonomyPlatform()
+    platform = AutonomyPlatform(
+        github_token=manager.github_token,
+        owner=manager.owner,
+        repo=manager.repo,
+    )
     wf = platform.create_workflow(LangGraphPlanningWorkflow)
     result = wf.run(issue)
     score = result.state.data.get("priority_score")
@@ -666,7 +704,11 @@ def cmd_breakdown(manager: WorkflowManager, args) -> int:
 
     issue = manager.issue_manager.get_issue(args.issue) or {}
     issue.setdefault("repository", "default")
-    platform = AutonomyPlatform()
+    platform = AutonomyPlatform(
+        github_token=manager.github_token,
+        owner=manager.owner,
+        repo=manager.repo,
+    )
     wf = platform.create_workflow(PlanningWorkflow)
     state = wf.decompose(issue)
     for t in state.get("tasks", []):
@@ -678,7 +720,11 @@ def cmd_memory(manager: WorkflowManager, args) -> int:
     """Display learned patterns."""
     from ..core.platform import AutonomyPlatform
 
-    platform = AutonomyPlatform()
+    platform = AutonomyPlatform(
+        github_token=manager.github_token,
+        owner=manager.owner,
+        repo=manager.repo,
+    )
     if not platform.memory.store:
         print("No patterns learned yet")
         return 0
