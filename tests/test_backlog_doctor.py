@@ -57,3 +57,29 @@ def test_run_applies_labels():
     assert result["stale"] == [1]
     assert result["oversized"] == [1]
     assert mgr.labeled  # labels applied
+
+
+class DummySlackBot:
+    def __init__(self) -> None:
+        self.posts = []
+
+    def post_message(self, channel: str, text: str, blocks=None) -> bool:
+        self.posts.append((channel, text, blocks))
+        return True
+
+
+def test_run_nightly_diagnosis_posts_digest():
+    issues = [
+        _make_issue(1, days=15),
+        _make_issue(2, title="Login", body="\n".join(["- [ ] x" for _ in range(11)])),
+        _make_issue(3, title="Login page"),
+    ]
+    mgr = DummyIssueManager(issues)
+    slack = DummySlackBot()
+    doctor = BacklogDoctor(mgr, slack)
+    result = doctor.run_nightly_diagnosis(channel="#c")
+    assert result["stale_count"] == 1
+    assert result["duplicate_pairs"] >= 1
+    assert result["oversized_count"] == 1
+    assert slack.posts
+    assert "Backlog Doctor" in slack.posts[0][1]
