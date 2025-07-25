@@ -102,4 +102,5 @@ jobs:
           pytest -o addopts='' tests/test_hierarchy_manager.py -q
           pytest -o addopts='' tests/test_metrics.py -q
           pytest -o addopts='' tests/test_release_scripts.py -q
+          pytest -o addopts='' tests/test_error_handling.py -q
 

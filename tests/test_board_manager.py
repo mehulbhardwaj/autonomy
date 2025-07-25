@@ -14,7 +14,7 @@ class DummyResponse:
 def test_init_board_creates_fields(tmp_path, monkeypatch):
     calls = []
 
-    def dummy_post(url, headers=None, json=None, timeout=10):
+    def dummy_post(self, method, url, headers=None, json=None, timeout=10):
         query = json["query"]
         calls.append(query)
         if "RepoProjects" in query:
@@ -45,7 +45,9 @@ def test_init_board_creates_fields(tmp_path, monkeypatch):
             )
         return DummyResponse({"data": {}})
 
-    monkeypatch.setattr("requests.post", dummy_post)
+    monkeypatch.setattr(
+        "src.github.client.ResilientGitHubClient.make_request", dummy_post
+    )
     cache = tmp_path / "cache.json"
     bm = BoardManager("t", "o", "r", cache_path=cache)
     result = bm.init_board()
@@ -59,7 +61,7 @@ def test_init_board_creates_fields(tmp_path, monkeypatch):
 def test_init_board_uses_existing(tmp_path, monkeypatch):
     calls = []
 
-    def dummy_post(url, headers=None, json=None, timeout=10):
+    def dummy_post(self, method, url, headers=None, json=None, timeout=10):
         query = json["query"]
         calls.append(query)
         if "RepoProjects" in query:
@@ -95,7 +97,9 @@ def test_init_board_uses_existing(tmp_path, monkeypatch):
             raise AssertionError("Should not add options for existing fields")
         return DummyResponse({"data": {}})
 
-    monkeypatch.setattr("requests.post", dummy_post)
+    monkeypatch.setattr(
+        "src.github.client.ResilientGitHubClient.make_request", dummy_post
+    )
     cache = tmp_path / "cache.json"
     bm = BoardManager("t", "o", "r", cache_path=cache)
     result = bm.init_board()
@@ -108,7 +112,7 @@ def test_default_cache_path(monkeypatch, tmp_path):
 
     calls = []
 
-    def dummy_post(url, headers=None, json=None, timeout=10):
+    def dummy_post(self, method, url, headers=None, json=None, timeout=10):
         query = json["query"]
         calls.append(query)
         if "RepoProjects" in query:
@@ -127,7 +131,9 @@ def test_default_cache_path(monkeypatch, tmp_path):
             )
         return DummyResponse({"data": {}})
 
-    monkeypatch.setattr("requests.post", dummy_post)
+    monkeypatch.setattr(
+        "src.github.client.ResilientGitHubClient.make_request", dummy_post
+    )
     bm = BoardManager("t", "o", "r")
     bm.init_board()
     default_path = tmp_path / ".autonomy" / "field_cache.json"
