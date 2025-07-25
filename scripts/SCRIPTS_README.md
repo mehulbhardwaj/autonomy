@@ -72,11 +72,12 @@ Feel free to tweak:
 | *Milestone created but no issues* | Check `jq` is installed; ensure rate-limit not exceeded |
 | *Duplicates* | Delete duplicated milestones/issues and rerun after patching script |
 
-## 7. Future Scripts
+## 7. Additional Utilities
 
-Planned utilities:
+The following helper scripts streamline package releases and testing:
 
-* `bump-version.sh` – update crates, package.json and app version in one go  
-* `release-notes.sh` – auto-generate changelog from merged PRs  
+* `bump-version.sh` – bump the project version and create a git tag
+* `release-notes.sh` – generate changelog entries from commit messages
+* `test-installation.sh` – verify installation via `pipx` and `pip`
 
 Contributions welcome—open a PR or discussion!
