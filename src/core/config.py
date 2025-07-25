@@ -5,7 +5,13 @@ Configuration settings for the Generate-Verify loop workflow.
 """
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Dict
+
+try:
+    import yaml
+except Exception:  # pragma: no cover - optional dependency
+    yaml = None
 
 
 @dataclass
@@ -49,6 +55,33 @@ class WorkflowConfig:
 
     # Board configuration
     board_cache_path: str = "~/.autonomy/field_cache.json"
+
+    # ------------------------------------------------------------------
+    @classmethod
+    def from_yaml(cls, path: Path) -> "WorkflowConfig":
+        """Load configuration from a YAML file."""
+        if yaml is None:
+            raise RuntimeError("pyyaml not installed")
+        data = yaml.safe_load(path.read_text()) or {}
+        return cls.from_dict(data)
+
+    def save_yaml(self, path: Path) -> None:
+        """Write configuration to YAML file."""
+        if yaml is None:
+            raise RuntimeError("pyyaml not installed")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(yaml.safe_dump(self.to_dict()))
+
+    @classmethod
+    def load_default(cls) -> "WorkflowConfig":
+        """Load default configuration from ~/.autonomy/config.yml if present."""
+        default = Path.home() / ".autonomy" / "config.yml"
+        if default.exists():
+            try:
+                return cls.from_yaml(default)
+            except Exception:
+                pass
+        return cls()
 
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "WorkflowConfig":

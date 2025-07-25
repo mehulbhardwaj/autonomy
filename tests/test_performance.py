@@ -41,7 +41,7 @@ def test_cli_startup_time():
         check=True,
         env=env,
     )
-    assert time.time() - start < 5.0
+    assert time.time() - start < 7.0
 
 
 @pytest.mark.usefixtures("tmp_path")

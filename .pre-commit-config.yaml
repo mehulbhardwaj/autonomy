@@ -25,3 +25,10 @@ repos:
         env:
           MEM0_TELEMETRY: "False"
         pass_filenames: false
+  - repo: local
+    hooks:
+      - id: priority-check
+        name: show next task
+        entry: python scripts/pre_commit_priority.py
+        language: system
+        pass_filenames: false

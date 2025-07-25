@@ -2,6 +2,7 @@
 Basic tests for the Autonomy core package.
 """
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -39,6 +40,13 @@ class TestWorkflowConfig:
         """Custom board cache path is stored."""
         config = WorkflowConfig(board_cache_path="/tmp/cache.json")
         assert config.board_cache_path == "/tmp/cache.json"
+
+    def test_yaml_load_save(self, tmp_path):
+        cfg = WorkflowConfig(max_file_lines=123)
+        f = tmp_path / "cfg.yml"
+        cfg.save_yaml(f)
+        loaded = WorkflowConfig.from_yaml(f)
+        assert loaded.max_file_lines == 123
 
 
 class TestAgents:
@@ -187,6 +195,28 @@ class TestIntegration:
             )
 
             assert manager.config.max_file_lines == 500
+
+
+def test_config_validation_error():
+    cfg = WorkflowConfig(max_file_lines=0)
+    with pytest.raises(ValueError):
+        cfg.validate()
+
+
+def test_json_logging(tmp_path: Path):
+    cfg = WorkflowConfig()
+    mgr = WorkflowManager(
+        github_token="t",
+        owner="o",
+        repo="r",
+        workspace_path=str(tmp_path),
+        config=cfg,
+        log_json=True,
+    )
+    mgr.logger.info("hello")
+    log_file = tmp_path / "autonomy.log"
+    assert log_file.exists()
+    assert "hello" in log_file.read_text()
 
 
 if __name__ == "__main__":

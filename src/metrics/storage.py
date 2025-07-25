@@ -28,3 +28,20 @@ class MetricsStorage:
             safe["loc_per_assignee"] = mean(list(safe["loc_per_contributor"].values()))
             del safe["loc_per_contributor"]
         return safe
+
+    def export_prometheus(self) -> str:
+        """Return metrics formatted for Prometheus."""
+        lines = []
+        for file in self.storage_path.glob("*.json"):
+            try:
+                data = json.loads(file.read_text())
+            except Exception:
+                continue
+            repo = data.get("repository", "unknown").replace("/", "_")
+            date = data.get("date", "")
+            for key, value in data.items():
+                if key in {"repository", "date"}:
+                    continue
+                metric = f"autonomy_{key}"
+                lines.append(f'{metric}{{repository="{repo}",date="{date}"}} {value}')
+        return "\n".join(lines)

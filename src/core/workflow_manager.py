@@ -45,6 +45,8 @@ class WorkflowManager:
         repo: str,
         workspace_path: str = ".",
         config: Optional[WorkflowConfig] = None,
+        *,
+        log_json: bool = False,
     ):
         """
         Initialize the workflow manager.
@@ -61,6 +63,7 @@ class WorkflowManager:
         self.repo = repo
         self.workspace_path = Path(workspace_path)
         self.config = config or WorkflowConfig()
+        self.log_json = log_json
 
         # Initialize components
         from ..audit.logger import AuditLogger
@@ -99,13 +102,21 @@ class WorkflowManager:
         logger = logging.getLogger("github_workflow_manager")
         logger.setLevel(logging.INFO)
 
-        if not logger.handlers:
+        if logger.handlers:
+            logger.handlers.clear()
+        if self.log_json:
+            log_file = self.workspace_path / "autonomy.log"
+            handler = logging.FileHandler(log_file)
+            formatter = logging.Formatter(
+                '{"time":"%(asctime)s","level":"%(levelname)s","message":"%(message)s"}'
+            )
+        else:
             handler = logging.StreamHandler()
             formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
 
         return logger
 

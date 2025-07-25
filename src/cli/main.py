@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import sys
 import webbrowser
 from pathlib import Path
@@ -28,34 +29,12 @@ GitHubDeviceFlow = None
 SecureTokenStorage = None
 refresh_token_if_needed = None
 validate_token = None
-
-
-def _lazy_imports() -> None:
-    """Import heavy modules lazily."""
-    global click, requests, Console
-    global WorkflowConfig, SecretVault, WorkflowManager
-    global REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
-    global GitHubDeviceFlow, SecureTokenStorage, refresh_token_if_needed, validate_token
-
-    import click  # type: ignore
-    import requests  # type: ignore
-    from rich.console import Console  # type: ignore
-
-    from ..core.config import WorkflowConfig
-    from ..core.secret_vault import SecretVault
-    from ..core.workflow_manager import WorkflowManager
-    from ..github import REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
-    from ..github.device_flow import GitHubDeviceFlow
-    from ..github.token_storage import (
-        SecureTokenStorage,
-        refresh_token_if_needed,
-        validate_token,
-    )
+Table = None
 
 
 def _ensure_imports() -> None:
     """Load heavy dependencies if not already loaded."""
-    global click, requests, Console
+    global click, requests, Console, Table
     global WorkflowConfig, SecretVault, WorkflowManager
     global REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
     global GitHubDeviceFlow, SecureTokenStorage, refresh_token_if_needed, validate_token
@@ -70,8 +49,10 @@ def _ensure_imports() -> None:
         requests = requests
     if Console is None:
         from rich.console import Console as _Console  # type: ignore
+        from rich.table import Table as _Table  # type: ignore
 
         Console = _Console
+        Table = _Table  # noqa: F841
     if WorkflowConfig is None:
         from ..core.config import WorkflowConfig as _WorkflowConfig
 
@@ -114,11 +95,8 @@ def _ensure_imports() -> None:
         validate_token = _validate_token
 
 
-def main():
-    """Main CLI entry point"""
-    if {"-h", "--help"} & set(sys.argv[1:]):
-        print("GitHub Workflow Manager")
-        os._exit(0)
+def build_parser() -> argparse.ArgumentParser:
+    """Construct and return the CLI argument parser."""
     parser = argparse.ArgumentParser(
         description="GitHub Workflow Manager - Generate-Verify Loop with AI Agents",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -150,6 +128,12 @@ Environment Variables:
     )
     parser.add_argument("--config", help="Path to workflow config file")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument("--quiet", action="store_true", help="Minimal output")
+    parser.add_argument(
+        "--log-json",
+        action="store_true",
+        help="Write logs to autonomy.log in JSON format",
+    )
 
     # Subcommands
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -199,6 +183,10 @@ Environment Variables:
     )
     next_parser.add_argument("--assignee", help="Filter by assignee")
     next_parser.add_argument("--team", help="Filter by team")
+    next_parser.add_argument(
+        "--json", action="store_true", help="Output result as JSON"
+    )
+    next_parser.add_argument("--quiet", action="store_true", help="Minimal output")
 
     # Update command
     update_parser = subparsers.add_parser(
@@ -249,23 +237,26 @@ Environment Variables:
     nightly_parser.add_argument("--slack-token")
     nightly_parser.add_argument("--forever", action="store_true")
 
-    metrics_parser = subparsers.add_parser(
-        "metrics", help="Schedule daily metrics digest"
-    )
-    metrics_parser.add_argument("--repos", nargs="+", help="owner/repo list")
-    metrics_parser.add_argument("--channel", default="#autonomy-metrics")
-    metrics_parser.add_argument("--time", default="09:00")
-    metrics_parser.add_argument("--slack-token")
-    metrics_parser.add_argument("--forever", action="store_true")
+    metrics_parser = subparsers.add_parser("metrics", help="Metrics related commands")
+    metrics_sub = metrics_parser.add_subparsers(dest="metrics_cmd")
+
+    daily_parser = metrics_sub.add_parser("daily", help="Schedule daily metrics digest")
+    daily_parser.add_argument("--repos", nargs="+", help="owner/repo list")
+    daily_parser.add_argument("--channel", default="#autonomy-metrics")
+    daily_parser.add_argument("--time", default="09:00")
+    daily_parser.add_argument("--slack-token")
+    daily_parser.add_argument("--forever", action="store_true")
+
+    metrics_sub.add_parser("export", help="Export metrics in Prometheus format")
 
     # Board command
     board_parser = subparsers.add_parser("board", help="Manage project board")
     board_sub = board_parser.add_subparsers(dest="board_cmd")
     board_init_parser = board_sub.add_parser("init", help="Initialize board fields")
-    board_init_parser.add_argument(
-        "--cache",
-        help="Path to field cache file",
-    )
+    board_init_parser.add_argument("--cache", help="Path to field cache file")
+    board_sub.add_parser("reorder", help="Reorder board items by priority")
+    board_rank_parser = board_sub.add_parser("rank", help="Show ranked board items")
+    board_rank_parser.add_argument("--json", action="store_true", help="Output JSON")
 
     # Planning commands
     plan_parser = subparsers.add_parser("plan", help="Run planning workflow")
@@ -327,6 +318,106 @@ Environment Variables:
         help="Show Slack OAuth install URL (with action=slack)",
     )
 
+    # New commands
+    subparsers.add_parser("interactive", help="Start interactive shell")
+    comp_parser = subparsers.add_parser(
+        "completion", help="Output shell completion script"
+    )
+    comp_parser.add_argument(
+        "--shell", default="bash", choices=["bash", "zsh"], help="Shell type"
+    )
+
+    subparsers.add_parser("configure", help="Create default configuration")
+
+    return parser
+
+
+def _dispatch_command(
+    manager: WorkflowManager, vault: SecretVault, parser: argparse.ArgumentParser, args
+) -> int:
+    """Dispatch CLI command to its handler."""
+    if args.command == "setup":
+        return cmd_setup(manager, args)
+    if args.command == "process":
+        return cmd_process(manager, args)
+    if args.command == "init":
+        return cmd_init(manager, args)
+    if args.command == "status":
+        return cmd_status(manager, args)
+    if args.command == "next":
+        return cmd_next(manager, args)
+    if args.command == "update":
+        return cmd_update(manager, args)
+    if args.command == "list":
+        return cmd_list(manager, args)
+    if args.command == "pin":
+        return cmd_pin(manager, args)
+    if args.command == "unpin":
+        return cmd_unpin(manager, args)
+    if args.command == "plan":
+        return cmd_plan(manager, args)
+    if args.command == "explain":
+        return cmd_explain(manager, args)
+    if args.command == "tune":
+        return cmd_tune(manager, args)
+    if args.command == "rerank":
+        return cmd_rerank(manager, args)
+    if args.command == "assign":
+        return cmd_assign(manager, args)
+    if args.command == "breakdown":
+        return cmd_breakdown(manager, args)
+    if args.command == "memory":
+        return cmd_memory(manager, args)
+    if args.command == "doctor":
+        if args.doctor_cmd == "run":
+            return cmd_doctor(manager, args)
+        if args.doctor_cmd == "nightly":
+            return cmd_doctor_nightly(manager, vault, args)
+        print(f"Unknown doctor command: {args.doctor_cmd}")
+        return 1
+    if args.command == "metrics":
+        if args.metrics_cmd in {None, "daily"}:
+            return cmd_metrics_daily(manager, vault, args)
+        if args.metrics_cmd == "export":
+            return cmd_metrics_export(manager, args)
+        print(f"Unknown metrics command: {args.metrics_cmd}")
+        return 1
+    if args.command == "board":
+        if args.board_cmd == "init":
+            return cmd_board_init(manager, args)
+        if args.board_cmd == "reorder":
+            return cmd_board_reorder(manager, args)
+        if args.board_cmd == "rank":
+            return cmd_board_rank(manager, args)
+        print(f"Unknown board command: {args.board_cmd}")
+        return 1
+    if args.command == "audit":
+        if args.audit_cmd == "log":
+            return cmd_audit(manager, args)
+        print(f"Unknown audit command: {args.audit_cmd}")
+        return 1
+    if args.command == "undo":
+        return cmd_undo(manager, args)
+    if args.command == "slack":
+        return cmd_slack(vault, args)
+    if args.command == "auth":
+        return cmd_auth(vault, args)
+    if args.command == "interactive":
+        return cmd_interactive(manager, parser)
+    if args.command == "completion":
+        return cmd_completion(parser, args)
+    if args.command == "configure":
+        return cmd_configure(args)
+    print(f"Unknown command: {args.command}")
+    return 1
+
+
+def main():
+    """Main CLI entry point"""
+    if {"-h", "--help"} & set(sys.argv[1:]):
+        print("GitHub Workflow Manager")
+        os._exit(0)
+    parser = build_parser()
     args = parser.parse_args()
 
     if not args.command:
@@ -409,14 +500,22 @@ Environment Variables:
     if args.config:
         config_path = Path(args.config)
         if config_path.exists():
-            import json
+            if config_path.suffix in {".yml", ".yaml"}:
+                config = WorkflowConfig.from_yaml(config_path)
+            else:
+                import json
 
-            with open(config_path) as f:
-                config_data = json.load(f)
-            config = WorkflowConfig.from_dict(config_data)
+                with open(config_path) as f:
+                    config_data = json.load(f)
+                config = WorkflowConfig.from_dict(config_data)
 
     if not config:
-        config = WorkflowConfig()
+        config = WorkflowConfig.load_default()
+    try:
+        config.validate()
+    except Exception as e:
+        print(f"Configuration error: {e}")
+        return 1
 
     manager = None
     if args.command != "auth":
@@ -427,6 +526,7 @@ Environment Variables:
                 repo=args.repo,
                 workspace_path=str(workspace_path),
                 config=config,
+                log_json=args.log_json,
             )
         except Exception as e:
             print(f"Error initializing workflow manager: {e}")
@@ -434,66 +534,7 @@ Environment Variables:
 
     # Execute command
     try:
-        if args.command == "setup":
-            return cmd_setup(manager, args)
-        elif args.command == "process":
-            return cmd_process(manager, args)
-        elif args.command == "init":
-            return cmd_init(manager, args)
-        elif args.command == "status":
-            return cmd_status(manager, args)
-        elif args.command == "next":
-            return cmd_next(manager, args)
-        elif args.command == "update":
-            return cmd_update(manager, args)
-        elif args.command == "list":
-            return cmd_list(manager, args)
-        elif args.command == "pin":
-            return cmd_pin(manager, args)
-        elif args.command == "unpin":
-            return cmd_unpin(manager, args)
-        elif args.command == "plan":
-            return cmd_plan(manager, args)
-        elif args.command == "explain":
-            return cmd_explain(manager, args)
-        elif args.command == "tune":
-            return cmd_tune(manager, args)
-        elif args.command == "rerank":
-            return cmd_rerank(manager, args)
-        elif args.command == "assign":
-            return cmd_assign(manager, args)
-        elif args.command == "breakdown":
-            return cmd_breakdown(manager, args)
-        elif args.command == "memory":
-            return cmd_memory(manager, args)
-        elif args.command == "doctor":
-            if args.doctor_cmd == "run":
-                return cmd_doctor(manager, args)
-            if args.doctor_cmd == "nightly":
-                return cmd_doctor_nightly(manager, vault, args)
-            print(f"Unknown doctor command: {args.doctor_cmd}")
-            return 1
-        elif args.command == "metrics":
-            return cmd_metrics_daily(manager, vault, args)
-        elif args.command == "board":
-            if args.board_cmd == "init":
-                return cmd_board_init(manager, args)
-            print(f"Unknown board command: {args.board_cmd}")
-            return 1
-        elif args.command == "audit":
-            if args.audit_cmd == "log":
-                return cmd_audit(manager, args)
-            print(f"Unknown audit command: {args.audit_cmd}")
-            return 1
-        elif args.command == "undo":
-            return cmd_undo(manager, args)
-        elif args.command == "slack":
-            return cmd_slack(vault, args)
-        elif args.command == "auth":
-            return cmd_auth(vault, args)
-        else:
-            print(f"Unknown command: {args.command}")
-            return 1
+        return _dispatch_command(manager, vault, parser, args)
     except Exception as e:
         print(f"Error executing command: {e}")
         if args.verbose:
@@ -516,25 +557,32 @@ def cmd_setup(manager: WorkflowManager, args) -> int:
 @handle_errors
 def cmd_process(manager: WorkflowManager, args) -> int:
     """Process issue command"""
-    print(f"Processing issue #{args.issue} through Generate-Verify loop...")
+    console = Console()
+    console.print(f"Processing issue #{args.issue} through Generate-Verify loop...")
+    from rich.progress import Progress
 
-    result = manager.process_issue(args.issue)
+    with Progress(transient=True) as progress:
+        task = progress.add_task("Running", total=None)
+        result = manager.process_issue(args.issue)
+        progress.update(task, completed=1)
 
     if result.get("error"):
-        print(f"✗ Error: {result['error']}")
+        console.print(f"[red]✗ Error: {result['error']}[/red]")
         return 1
 
-        print(f"✓ Issue #{args.issue} processed")
-        print(f"  Status: {result.get('status', 'unknown')}")
-        print(f"  Phases completed: {', '.join(result.get('phases_completed', []))}")
+    console.print(f"[green]✓ Issue #{args.issue} processed[/green]")
+    console.print(f"  Status: {result.get('status', 'unknown')}")
+    console.print(
+        f"  Phases completed: {', '.join(result.get('phases_completed', []))}"
+    )
 
-        if result.get("artifacts_created"):
-            print(f"  Artifacts created: {len(result['artifacts_created'])}")
-            for artifact in result["artifacts_created"]:
-                print(f"    - {artifact}")
+    if result.get("artifacts_created"):
+        console.print(f"  Artifacts created: {len(result['artifacts_created'])}")
+        for artifact in result["artifacts_created"]:
+            console.print(f"    - {artifact}")
 
     if result.get("next_action"):
-        print(f"  Next action: {result['next_action']}")
+        console.print(f"  Next action: {result['next_action']}")
 
     return 0
 
@@ -583,6 +631,7 @@ def cmd_status(manager: WorkflowManager, args) -> int:
 
 def cmd_next(manager: WorkflowManager, args) -> int:
     """Return the next best task."""
+    _ensure_imports()
     from ..tasks.task_manager import TaskManager
 
     tm = TaskManager(manager.github_token, manager.owner, manager.repo)
@@ -593,14 +642,33 @@ def cmd_next(manager: WorkflowManager, args) -> int:
     )
     issue, breakdown = result if isinstance(result, tuple) else (result, {})
     if not issue:
-        print("No tasks found")
+        Console().print("No tasks found")
         return 0
 
     score = tm._score_issue(issue)
-    print(f"Next task: #{issue.get('number')} - {issue.get('title')}")
-    print(f"Priority score: {score:.2f}")
-    for k, v in breakdown.items():
-        print(f"  {k}: {v}")
+    if getattr(args, "json", False):
+        import json
+
+        Console().print(
+            json.dumps(
+                {
+                    "number": issue.get("number"),
+                    "title": issue.get("title"),
+                    "score": score,
+                    "breakdown": breakdown,
+                },
+                indent=2,
+            )
+        )
+    else:
+        if getattr(args, "quiet", False):
+            print(issue.get("number"))
+        else:
+            console = Console()
+            console.print(f"Next task: #{issue.get('number')} - {issue.get('title')}")
+            console.print(f"Priority score: {score:.2f}")
+            for k, v in breakdown.items():
+                console.print(f"  {k}: {v}")
     return 0
 
 
@@ -912,9 +980,22 @@ def cmd_metrics_daily(manager: WorkflowManager, vault: SecretVault, args) -> int
 
 
 @handle_errors
+def cmd_metrics_export(manager: WorkflowManager, args) -> int:
+    """Export stored metrics in Prometheus text format."""
+    from ..metrics.storage import MetricsStorage
+
+    storage = MetricsStorage(Path(manager.workspace_path))
+    output = storage.export_prometheus()
+    print(output)
+    return 0
+
+
+@handle_errors
 def cmd_board_init(manager: WorkflowManager, args) -> int:
     """Initialize project board fields."""
     from ..github.board_manager import BoardManager
+
+    _ensure_imports()
 
     cache_path = (
         Path(args.cache).expanduser()
@@ -929,6 +1010,53 @@ def cmd_board_init(manager: WorkflowManager, args) -> int:
     )
     bm.init_board()
     print("✓ Board initialized")
+    return 0
+
+
+@handle_errors
+def cmd_board_rank(manager: WorkflowManager, args) -> int:
+    """Show ranked project board items."""
+    _ensure_imports()
+    from ..github.board_manager import BoardManager
+
+    bm = BoardManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        cache_path=Path(manager.config.board_cache_path).expanduser(),
+    )
+    items = bm.rank_items()
+    if getattr(args, "json", False):
+        import json
+
+        Console().print(json.dumps(items, indent=2, default=str))
+    else:
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Issue")
+        table.add_column("Title")
+        table.add_column("Priority")
+        for itm in items:
+            table.add_row(
+                f"#{itm.get('number')}", itm.get("title", ""), str(itm.get("priority"))
+            )
+        Console().print(table)
+    return 0
+
+
+@handle_errors
+def cmd_board_reorder(manager: WorkflowManager, args) -> int:
+    """Reorder board items by ranking."""
+    _ensure_imports()
+    from ..github.board_manager import BoardManager
+
+    bm = BoardManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        cache_path=Path(manager.config.board_cache_path).expanduser(),
+    )
+    bm.reorder_items()
+    print("✓ Board reordered")
     return 0
 
 
@@ -1142,6 +1270,52 @@ def cmd_slack(vault: SecretVault, args) -> int:
 
     print(f"Unknown Slack command: {args.slack_cmd}")
     return 1
+
+
+def cmd_completion(parser: argparse.ArgumentParser, args) -> int:
+    """Output shell completion script."""
+    shell = args.shell
+    print(f'eval "$(register-python-argcomplete --shell {shell} autonomy)"')
+    return 0
+
+
+def cmd_interactive(manager: WorkflowManager, parser: argparse.ArgumentParser) -> int:
+    """Simple interactive shell for CLI commands."""
+    _ensure_imports()
+    console = Console()
+    vault = SecretVault()
+    console.print(
+        "[bold green]Autonomy Interactive Shell[/bold green] (type 'quit' to exit)"
+    )
+    while True:
+        try:
+            line = input("autonomy> ")
+        except EOFError:
+            break
+        if not line:
+            continue
+        if line.strip() in {"quit", "exit"}:
+            break
+        try:
+            sub_args = parser.parse_args(shlex.split(line))
+            _dispatch_command(manager, vault, parser, sub_args)
+        except SystemExit:
+            console.print("[red]Invalid command[/red]")
+    return 0
+
+
+def cmd_configure(args) -> int:
+    """Write a default configuration file."""
+    _ensure_imports()
+    path = Path.home() / ".autonomy" / "config.yml"
+    cfg = WorkflowConfig.load_default()
+    try:
+        cfg.save_yaml(path)
+        print(f"\N{CHECK MARK} Config written to {path}")
+        return 0
+    except Exception as e:
+        print(f"Error writing config: {e}")
+        return 1
 
 
 def _create_web_template(workspace_path: Path) -> None:
