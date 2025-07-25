@@ -475,52 +475,24 @@ def cmd_status(manager: WorkflowManager, args) -> int:
 
 def cmd_next(manager: WorkflowManager, args) -> int:
     """Return the next best task."""
-    from ..core.platform import AutonomyPlatform
-    from ..planning.workflow import PlanningWorkflow
+    from ..tasks.task_manager import TaskManager
 
-    issues = manager.issue_manager.list_issues(state="open")
-    filtered = []
-    for issue in issues:
-        labels = [
-            label["name"] if isinstance(label, dict) and "name" in label else label
-            for label in issue.get("labels", [])
-        ]
-        if args.assignee:
-            found = False
-            if (
-                issue.get("assignee")
-                and issue["assignee"].get("login") == args.assignee
-            ):
-                found = True
-            for a in issue.get("assignees", []) or []:
-                if a and a.get("login") == args.assignee:
-                    found = True
-            if not found:
-                continue
-        if args.team and not any(
-            lbl.lower() == f"team:{args.team.lower()}" for lbl in labels
-        ):
-            continue
-        filtered.append(issue)
-
-    platform = AutonomyPlatform(
-        github_token=manager.github_token,
-        owner=manager.owner,
-        repo=manager.repo,
+    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    result = tm.get_next_task(
+        assignee=args.assignee,
+        team=args.team,
+        explain=True,
     )
-    wf = platform.create_workflow(PlanningWorkflow)
-    ranked = wf.rank_issues(filtered, explain=True)
-    if not ranked:
+    issue, breakdown = result if isinstance(result, tuple) else (result, {})
+    if not issue:
         print("No tasks found")
         return 0
 
-    issue = ranked[0]
+    score = tm._score_issue(issue)
     print(f"Next task: #{issue.get('number')} - {issue.get('title')}")
-    breakdown = issue.get("ranking_reason", {})
-    if breakdown:
-        print(
-            f"  Priority score: {breakdown.get('priority')} age_penalty={breakdown.get('age_penalty')}"
-        )
+    print(f"Priority score: {score:.2f}")
+    for k, v in breakdown.items():
+        print(f"  {k}: {v}")
     return 0
 
 
@@ -634,8 +606,25 @@ def cmd_plan(manager: WorkflowManager, args) -> int:
     )
     wf = platform.create_workflow(LangGraphPlanningWorkflow)
     result = wf.run(issue)
-    score = result.state.data.get("priority_score")
-    print(f"Priority score: {score}")
+    state = result.state.data
+
+    print(f"Priority score: {state.get('priority_score')}")
+    if state.get("analysis"):
+        print(f"Analysis: {state['analysis']}")
+
+    tasks = state.get("tasks", [])
+    if tasks:
+        print("Tasks:")
+        for t in tasks:
+            print(f"- {t}")
+
+    if state.get("assignee"):
+        print(f"Assignee: {state['assignee']}")
+
+    if state.get("plan"):
+        print("Plan:")
+        print(state["plan"])
+
     return 0
 
 
@@ -646,9 +635,11 @@ def cmd_explain(manager: WorkflowManager, args) -> int:
     issue = manager.issue_manager.get_issue(args.issue) or {}
     eng = RankingEngine()
     score, breakdown = eng.score_issue(issue, explain=True)
-    print(f"Score: {score}")
-    for k, v in breakdown.items():
-        print(f"  {k}: {v}")
+    print(f"Score: {score:.2f}")
+    if breakdown:
+        print("Reasoning:")
+        for k, v in breakdown.items():
+            print(f"  {k}: {v}")
     return 0
 
 
