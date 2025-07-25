@@ -7,6 +7,7 @@ Supports the Generate-Verify loop workflow with PM-agent, SDE-agent, and QA-agen
 
 import argparse
 from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -356,6 +357,96 @@ class IssueManager:
             return success
         except Exception:
             return False
+
+    # ------------------------------------------------------------------
+    def get_open_issues_count(self, repo: str | None = None) -> int:
+        """Return the number of open issues for ``repo``."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/issues",
+                headers=self.headers,
+                params={"state": "open"},
+            )
+            if response.status_code == 200:
+                return len(response.json())
+        except Exception:
+            pass
+        return 0
+
+    def calculate_time_to_task(self) -> float:
+        """Average hours from issue creation to first assignment."""
+        issues = self.list_issues(state="all")
+        durations = []
+        for issue in issues:
+            created = issue.get("created_at")
+            if not created:
+                continue
+            try:
+                created_dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
+            except Exception:
+                continue
+            try:
+                events = requests.get(
+                    f"{self.base_url}/issues/{issue['number']}/events",
+                    headers=self.headers,
+                )
+                if events.status_code != 200:
+                    continue
+                for ev in events.json():
+                    if ev.get("event") == "assigned":
+                        assigned_dt = datetime.fromisoformat(
+                            ev["created_at"].replace("Z", "+00:00")
+                        )
+                        durations.append(
+                            (assigned_dt - created_dt).total_seconds() / 3600.0
+                        )
+                        break
+            except Exception:
+                continue
+        if not durations:
+            return 0.0
+        return sum(durations) / len(durations)
+
+    def weekly_active_users(self, days: int = 7) -> int:
+        """Count unique issue creators in the past ``days``."""
+        since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+        try:
+            response = requests.get(
+                f"{self.base_url}/issues",
+                headers=self.headers,
+                params={"since": since, "state": "all"},
+            )
+            if response.status_code != 200:
+                return 0
+            users = {
+                i.get("user", {}).get("login")
+                for i in response.json()
+                if i.get("user") and i.get("user", {}).get("login")
+            }
+            return len(users)
+        except Exception:
+            return 0
+
+    def calculate_sprint_completion(self) -> float:
+        """Return percent of issues closed in the nearest open milestone."""
+        try:
+            response = requests.get(
+                f"{self.base_url}/milestones",
+                headers=self.headers,
+                params={"state": "open", "sort": "due_on", "direction": "asc"},
+            )
+            if response.status_code != 200:
+                return 0.0
+            milestones = response.json()
+            if not milestones:
+                return 0.0
+            ms = milestones[0]
+            closed = ms.get("closed_issues", 0)
+            open_cnt = ms.get("open_issues", 0)
+            total = closed + open_cnt
+            return (closed / total * 100) if total else 0.0
+        except Exception:
+            return 0.0
 
     def add_comment(self, issue_number: int, comment: str) -> bool:
         """Add a comment to an issue."""
