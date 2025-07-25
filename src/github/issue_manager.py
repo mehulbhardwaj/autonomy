@@ -6,10 +6,12 @@ Supports the Generate-Verify loop workflow with PM-agent, SDE-agent, and QA-agen
 """
 
 import argparse
+import asyncio
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
+import httpx
 import requests
 
 try:
@@ -56,7 +58,14 @@ class Issue:
 class IssueManager:
     """Main class for managing GitHub issues"""
 
-    def __init__(self, github_token: str, owner: str, repo: str, audit_logger=None):
+    def __init__(
+        self,
+        github_token: str,
+        owner: str,
+        repo: str,
+        audit_logger=None,
+        session: requests.Session | None = None,
+    ):
         self.github_token = github_token
         self.owner = owner
         self.repo = repo
@@ -66,6 +75,7 @@ class IssueManager:
             "Accept": "application/vnd.github.v3+json",
             "Content-Type": "application/json",
         }
+        self.session = session
 
         # Optional audit logger for tracking operations
         self.audit_logger = audit_logger
@@ -108,7 +118,8 @@ class IssueManager:
 
         for label in self.standard_labels:
             try:
-                response = requests.post(
+                sess = self.session or requests
+                response = sess.post(
                     f"{self.base_url}/labels", headers=self.headers, json=asdict(label)
                 )
 
@@ -116,7 +127,7 @@ class IssueManager:
                     print(f"✓ Created label: {label.name}")
                 elif response.status_code == 422:
                     # Label already exists, update it
-                    requests.patch(
+                    sess.patch(
                         f"{self.base_url}/labels/{label.name}",
                         headers=self.headers,
                         json={"color": label.color, "description": label.description},
@@ -132,7 +143,8 @@ class IssueManager:
         """Create a milestone and return its number"""
         try:
             milestone_dict = asdict(milestone)
-            response = requests.post(
+            sess = self.session or requests
+            response = sess.post(
                 f"{self.base_url}/milestones", headers=self.headers, json=milestone_dict
             )
 
@@ -199,7 +211,8 @@ class IssueManager:
             issue_data["assignees"] = issue.assignees
 
         try:
-            response = requests.post(
+            sess = self.session or requests
+            response = sess.post(
                 f"{self.base_url}/issues", headers=self.headers, json=issue_data
             )
 
@@ -226,7 +239,8 @@ class IssueManager:
     def list_issues(self, state: str = "open") -> List[Dict[str, Any]]:
         """Return a list of issues from the repository"""
         try:
-            response = requests.get(
+            sess = self.session or requests
+            response = sess.get(
                 f"{self.base_url}/issues",
                 headers=self.headers,
                 params={"state": state},
@@ -240,7 +254,8 @@ class IssueManager:
     def get_issue(self, issue_number: int) -> Optional[Dict[str, Any]]:
         """Return a single issue if found."""
         try:
-            response = requests.get(
+            sess = self.session or requests
+            response = sess.get(
                 f"{self.base_url}/issues/{issue_number}", headers=self.headers
             )
             if response.status_code == 200:
@@ -249,10 +264,32 @@ class IssueManager:
             pass
         return None
 
+    async def _fetch_issue_async(
+        self, client: httpx.AsyncClient, issue_number: int
+    ) -> Optional[Dict[str, Any]]:
+        try:
+            response = await client.get(
+                f"{self.base_url}/issues/{issue_number}", headers=self.headers
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception:
+            pass
+        return None
+
+    async def bulk_fetch_issues(
+        self, issue_numbers: List[int]
+    ) -> List[Optional[Dict[str, Any]]]:
+        """Fetch multiple issues concurrently."""
+        async with httpx.AsyncClient() as client:
+            tasks = [self._fetch_issue_async(client, num) for num in issue_numbers]
+            return await asyncio.gather(*tasks)
+
     def update_issue_state(self, issue_number: int, state: str) -> bool:
         """Update the state of an issue (e.g., open or closed)."""
         try:
-            response = requests.patch(
+            sess = self.session or requests
+            response = sess.patch(
                 f"{self.base_url}/issues/{issue_number}",
                 headers=self.headers,
                 json={"state": state},
@@ -287,7 +324,8 @@ class IssueManager:
             labels = [label for label in labels if label not in remove_labels]
         labels = list(dict.fromkeys(labels))
         try:
-            response = requests.patch(
+            sess = self.session or requests
+            response = sess.patch(
                 f"{self.base_url}/issues/{issue_number}",
                 headers=self.headers,
                 json={"labels": labels},
@@ -325,7 +363,8 @@ class IssueManager:
         if not payload:
             return False
         try:
-            response = requests.patch(
+            sess = self.session or requests
+            response = sess.patch(
                 f"{self.base_url}/issues/{issue_number}",
                 headers=self.headers,
                 json=payload,
@@ -343,7 +382,8 @@ class IssueManager:
     def assign_issue(self, issue_number: int, assignees: List[str]) -> bool:
         """Assign users to an issue."""
         try:
-            response = requests.patch(
+            sess = self.session or requests
+            response = sess.patch(
                 f"{self.base_url}/issues/{issue_number}",
                 headers=self.headers,
                 json={"assignees": assignees},
@@ -362,7 +402,8 @@ class IssueManager:
     def get_open_issues_count(self, repo: str | None = None) -> int:
         """Return the number of open issues for ``repo``."""
         try:
-            response = requests.get(
+            sess = self.session or requests
+            response = sess.get(
                 f"{self.base_url}/issues",
                 headers=self.headers,
                 params={"state": "open"},
@@ -386,7 +427,8 @@ class IssueManager:
             except Exception:
                 continue
             try:
-                events = requests.get(
+                sess = self.session or requests
+                events = sess.get(
                     f"{self.base_url}/issues/{issue['number']}/events",
                     headers=self.headers,
                 )
@@ -411,7 +453,8 @@ class IssueManager:
         """Count unique issue creators in the past ``days``."""
         since = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
         try:
-            response = requests.get(
+            sess = self.session or requests
+            response = sess.get(
                 f"{self.base_url}/issues",
                 headers=self.headers,
                 params={"since": since, "state": "all"},
@@ -430,7 +473,8 @@ class IssueManager:
     def calculate_sprint_completion(self) -> float:
         """Return percent of issues closed in the nearest open milestone."""
         try:
-            response = requests.get(
+            sess = self.session or requests
+            response = sess.get(
                 f"{self.base_url}/milestones",
                 headers=self.headers,
                 params={"state": "open", "sort": "due_on", "direction": "asc"},
@@ -451,7 +495,8 @@ class IssueManager:
     def add_comment(self, issue_number: int, comment: str) -> bool:
         """Add a comment to an issue."""
         try:
-            response = requests.post(
+            sess = self.session or requests
+            response = sess.post(
                 f"{self.base_url}/issues/{issue_number}/comments",
                 headers=self.headers,
                 json={"body": comment},
