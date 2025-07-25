@@ -70,3 +70,15 @@ def test_storage_filters_personal_data(tmp_path: Path) -> None:
     stored = next((tmp_path / "metrics").glob("*.json")).read_text()
     assert "loc_per_contributor" not in stored
     assert "loc_per_assignee" in stored
+
+
+def test_export_prometheus(tmp_path: Path) -> None:
+    storage = MetricsStorage(tmp_path)
+    metrics = {
+        "date": date.today(),
+        "repository": "owner/repo",
+        "time_to_task_avg": 5,
+    }
+    storage.store_daily_metrics("owner/repo", metrics)
+    output = storage.export_prometheus()
+    assert "autonomy_time_to_task_avg" in output

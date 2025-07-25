@@ -2,6 +2,7 @@
 Basic tests for the Autonomy core package.
 """
 
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -194,6 +195,28 @@ class TestIntegration:
             )
 
             assert manager.config.max_file_lines == 500
+
+
+def test_config_validation_error():
+    cfg = WorkflowConfig(max_file_lines=0)
+    with pytest.raises(ValueError):
+        cfg.validate()
+
+
+def test_json_logging(tmp_path: Path):
+    cfg = WorkflowConfig()
+    mgr = WorkflowManager(
+        github_token="t",
+        owner="o",
+        repo="r",
+        workspace_path=str(tmp_path),
+        config=cfg,
+        log_json=True,
+    )
+    mgr.logger.info("hello")
+    log_file = tmp_path / "autonomy.log"
+    assert log_file.exists()
+    assert "hello" in log_file.read_text()
 
 
 if __name__ == "__main__":

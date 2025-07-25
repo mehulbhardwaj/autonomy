@@ -455,3 +455,17 @@ def test_cmd_configure(monkeypatch, tmp_path: Path):
     assert main.cmd_configure(args) == 0
     cfg_file = tmp_path / ".autonomy" / "config.yml"
     assert cfg_file.exists()
+
+
+def test_cmd_metrics_export(tmp_path: Path, capsys):
+    manager = DummyManager(tmp_path)
+    metrics_dir = tmp_path / "metrics"
+    metrics_dir.mkdir()
+    sample = metrics_dir / "o-r_2025-01-01.json"
+    sample.write_text(
+        '{"date": "2025-01-01", "repository": "o/r", "time_to_task_avg": 2}'
+    )
+    args = SimpleNamespace(metrics_cmd="export")
+    assert main.cmd_metrics_export(manager, args) == 0
+    out = capsys.readouterr().out
+    assert "autonomy_time_to_task_avg" in out

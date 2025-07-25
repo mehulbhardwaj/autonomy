@@ -128,6 +128,12 @@ Environment Variables:
     )
     parser.add_argument("--config", help="Path to workflow config file")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    parser.add_argument("--quiet", action="store_true", help="Minimal output")
+    parser.add_argument(
+        "--log-json",
+        action="store_true",
+        help="Write logs to autonomy.log in JSON format",
+    )
 
     # Subcommands
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -180,6 +186,7 @@ Environment Variables:
     next_parser.add_argument(
         "--json", action="store_true", help="Output result as JSON"
     )
+    next_parser.add_argument("--quiet", action="store_true", help="Minimal output")
 
     # Update command
     update_parser = subparsers.add_parser(
@@ -230,14 +237,17 @@ Environment Variables:
     nightly_parser.add_argument("--slack-token")
     nightly_parser.add_argument("--forever", action="store_true")
 
-    metrics_parser = subparsers.add_parser(
-        "metrics", help="Schedule daily metrics digest"
-    )
-    metrics_parser.add_argument("--repos", nargs="+", help="owner/repo list")
-    metrics_parser.add_argument("--channel", default="#autonomy-metrics")
-    metrics_parser.add_argument("--time", default="09:00")
-    metrics_parser.add_argument("--slack-token")
-    metrics_parser.add_argument("--forever", action="store_true")
+    metrics_parser = subparsers.add_parser("metrics", help="Metrics related commands")
+    metrics_sub = metrics_parser.add_subparsers(dest="metrics_cmd")
+
+    daily_parser = metrics_sub.add_parser("daily", help="Schedule daily metrics digest")
+    daily_parser.add_argument("--repos", nargs="+", help="owner/repo list")
+    daily_parser.add_argument("--channel", default="#autonomy-metrics")
+    daily_parser.add_argument("--time", default="09:00")
+    daily_parser.add_argument("--slack-token")
+    daily_parser.add_argument("--forever", action="store_true")
+
+    metrics_sub.add_parser("export", help="Export metrics in Prometheus format")
 
     # Board command
     board_parser = subparsers.add_parser("board", help="Manage project board")
@@ -366,7 +376,12 @@ def _dispatch_command(
         print(f"Unknown doctor command: {args.doctor_cmd}")
         return 1
     if args.command == "metrics":
-        return cmd_metrics_daily(manager, vault, args)
+        if args.metrics_cmd in {None, "daily"}:
+            return cmd_metrics_daily(manager, vault, args)
+        if args.metrics_cmd == "export":
+            return cmd_metrics_export(manager, args)
+        print(f"Unknown metrics command: {args.metrics_cmd}")
+        return 1
     if args.command == "board":
         if args.board_cmd == "init":
             return cmd_board_init(manager, args)
@@ -496,6 +511,11 @@ def main():
 
     if not config:
         config = WorkflowConfig.load_default()
+    try:
+        config.validate()
+    except Exception as e:
+        print(f"Configuration error: {e}")
+        return 1
 
     manager = None
     if args.command != "auth":
@@ -506,6 +526,7 @@ def main():
                 repo=args.repo,
                 workspace_path=str(workspace_path),
                 config=config,
+                log_json=args.log_json,
             )
         except Exception as e:
             print(f"Error initializing workflow manager: {e}")
@@ -640,11 +661,14 @@ def cmd_next(manager: WorkflowManager, args) -> int:
             )
         )
     else:
-        console = Console()
-        console.print(f"Next task: #{issue.get('number')} - {issue.get('title')}")
-        console.print(f"Priority score: {score:.2f}")
-        for k, v in breakdown.items():
-            console.print(f"  {k}: {v}")
+        if getattr(args, "quiet", False):
+            print(issue.get("number"))
+        else:
+            console = Console()
+            console.print(f"Next task: #{issue.get('number')} - {issue.get('title')}")
+            console.print(f"Priority score: {score:.2f}")
+            for k, v in breakdown.items():
+                console.print(f"  {k}: {v}")
     return 0
 
 
@@ -952,6 +976,17 @@ def cmd_metrics_daily(manager: WorkflowManager, vault: SecretVault, args) -> int
         log_path=Path(manager.workspace_path) / "audit.log",
     )
     service.run(forever=args.forever)
+    return 0
+
+
+@handle_errors
+def cmd_metrics_export(manager: WorkflowManager, args) -> int:
+    """Export stored metrics in Prometheus text format."""
+    from ..metrics.storage import MetricsStorage
+
+    storage = MetricsStorage(Path(manager.workspace_path))
+    output = storage.export_prometheus()
+    print(output)
     return 0
 
 

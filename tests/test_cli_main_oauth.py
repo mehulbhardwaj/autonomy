@@ -31,7 +31,7 @@ class DummyFlow:
 
 
 class DummyManager:
-    def __init__(self, github_token, owner, repo, workspace_path, config):
+    def __init__(self, github_token, owner, repo, workspace_path, config, **kw):
         self.github_token = github_token
         self.owner = owner
         self.repo = repo
