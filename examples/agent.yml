@@ -1,0 +1,11 @@
+# Example planning agent configuration
+agent:
+  name: example-planner
+  workflow: planning
+  model: openai/gpt-4o
+  description: Basic planning agent that analyzes issues and creates tasks.
+github:
+  repository: my-org/my-repo
+memory:
+  provider: mem0
+  workspace: my-org/my-repo
