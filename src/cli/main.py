@@ -87,9 +87,12 @@ def _ensure_imports() -> None:
 
     if REQUIRED_GITHUB_SCOPES is None:
         from ..github import REQUIRED_GITHUB_SCOPES as _SCOPES
-        from ..github import validate_github_token_scopes as _validate
 
         REQUIRED_GITHUB_SCOPES = _SCOPES
+
+    if validate_github_token_scopes is None:
+        from ..github import validate_github_token_scopes as _validate
+
         validate_github_token_scopes = _validate
 
     if GitHubDeviceFlow is None:
