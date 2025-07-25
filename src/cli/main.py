@@ -10,6 +10,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 os.environ.setdefault("POSTHOG_DISABLED", "1")
+# Disable Mem0 telemetry by default to avoid network delays on startup
+os.environ.setdefault("MEM0_TELEMETRY", "False")
 
 # Placeholders for optional heavy imports
 click = SimpleNamespace(confirm=lambda *a, **kw: True)
