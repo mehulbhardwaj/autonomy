@@ -9,6 +9,8 @@ import webbrowser
 from pathlib import Path
 from types import SimpleNamespace
 
+from ..core.errors import handle_errors
+
 os.environ.setdefault("POSTHOG_DISABLED", "1")
 # Disable Mem0 telemetry by default to avoid network delays on startup
 os.environ.setdefault("MEM0_TELEMETRY", "False")
@@ -501,29 +503,26 @@ Environment Variables:
         return 1
 
 
+@handle_errors
 def cmd_setup(manager: WorkflowManager, args) -> int:
     """Setup repository command"""
     print(f"Setting up repository {manager.owner}/{manager.repo}...")
 
-    try:
-        manager.setup_repository()
-        print("✓ Repository setup complete")
-        return 0
-    except Exception as e:
-        print(f"✗ Setup failed: {e}")
-        return 1
+    manager.setup_repository()
+    print("✓ Repository setup complete")
+    return 0
 
 
+@handle_errors
 def cmd_process(manager: WorkflowManager, args) -> int:
     """Process issue command"""
     print(f"Processing issue #{args.issue} through Generate-Verify loop...")
 
-    try:
-        result = manager.process_issue(args.issue)
+    result = manager.process_issue(args.issue)
 
-        if result.get("error"):
-            print(f"✗ Error: {result['error']}")
-            return 1
+    if result.get("error"):
+        print(f"✗ Error: {result['error']}")
+        return 1
 
         print(f"✓ Issue #{args.issue} processed")
         print(f"  Status: {result.get('status', 'unknown')}")
@@ -534,41 +533,35 @@ def cmd_process(manager: WorkflowManager, args) -> int:
             for artifact in result["artifacts_created"]:
                 print(f"    - {artifact}")
 
-        if result.get("next_action"):
-            print(f"  Next action: {result['next_action']}")
+    if result.get("next_action"):
+        print(f"  Next action: {result['next_action']}")
 
-        return 0
-    except Exception as e:
-        print(f"✗ Processing failed: {e}")
-        return 1
+    return 0
 
 
+@handle_errors
 def cmd_init(manager: WorkflowManager, args) -> int:
     """Initialize project command"""
     print(f"Initializing new project with {args.template} template...")
 
-    try:
-        # Setup repository first
-        manager.setup_repository()
+    # Setup repository first
+    manager.setup_repository()
 
-        # Create template-specific files
-        if args.template == "web":
-            _create_web_template(manager.workspace_path)
-        elif args.template == "api":
-            _create_api_template(manager.workspace_path)
-        elif args.template == "cli":
-            _create_cli_template(manager.workspace_path)
-        else:  # library
-            _create_library_template(manager.workspace_path)
+    # Create template-specific files
+    if args.template == "web":
+        _create_web_template(manager.workspace_path)
+    elif args.template == "api":
+        _create_api_template(manager.workspace_path)
+    elif args.template == "cli":
+        _create_cli_template(manager.workspace_path)
+    else:  # library
+        _create_library_template(manager.workspace_path)
 
-        print("✓ Project initialized successfully")
-        print(f"  Template: {args.template}")
-        print(f"  Workspace: {manager.workspace_path}")
+    print("✓ Project initialized successfully")
+    print(f"  Template: {args.template}")
+    print(f"  Workspace: {manager.workspace_path}")
 
-        return 0
-    except Exception as e:
-        print(f"✗ Initialization failed: {e}")
-        return 1
+    return 0
 
 
 def cmd_status(manager: WorkflowManager, args) -> int:
@@ -918,6 +911,7 @@ def cmd_metrics_daily(manager: WorkflowManager, vault: SecretVault, args) -> int
     return 0
 
 
+@handle_errors
 def cmd_board_init(manager: WorkflowManager, args) -> int:
     """Initialize project board fields."""
     from ..github.board_manager import BoardManager
@@ -933,13 +927,9 @@ def cmd_board_init(manager: WorkflowManager, args) -> int:
         manager.repo,
         cache_path=cache_path,
     )
-    try:
-        bm.init_board()
-        print("✓ Board initialized")
-        return 0
-    except Exception as e:
-        print(f"✗ Board initialization failed: {e}")
-        return 1
+    bm.init_board()
+    print("✓ Board initialized")
+    return 0
 
 
 def cmd_audit(manager: WorkflowManager, args) -> int:

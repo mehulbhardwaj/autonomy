@@ -4,18 +4,21 @@ import json
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
-import requests
+from ..core.errors import GitHubAPIError
+from .client import ResilientGitHubClient
 
 
 class GraphQLClient:
-    """Minimal GitHub GraphQL client."""
+    """Minimal GitHub GraphQL client with retry logic."""
 
     def __init__(self, token: str) -> None:
         self.token = token
         self.url = "https://api.github.com/graphql"
+        self.client = ResilientGitHubClient()
 
     def execute(self, query: str, variables: Optional[dict] = None) -> dict:
-        response = requests.post(
+        response = self.client.make_request(
+            "post",
             self.url,
             headers={
                 "Authorization": f"bearer {self.token}",
@@ -25,10 +28,13 @@ class GraphQLClient:
             timeout=10,
         )
         if response.status_code != 200:
-            raise ValueError(f"GraphQL error: {response.status_code} {response.text}")
+            raise GitHubAPIError(
+                f"GraphQL error: {response.status_code} {response.text}",
+                suggestion="Check your GitHub token and permissions",
+            )
         data = response.json()
         if data.get("errors"):
-            raise ValueError(str(data["errors"]))
+            raise GitHubAPIError(str(data["errors"]))
         return data.get("data", {})
 
 

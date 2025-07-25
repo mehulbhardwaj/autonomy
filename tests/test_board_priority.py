@@ -12,7 +12,7 @@ class DummyResponse:
 
 
 def _mock_post_factory(items, record):
-    def dummy_post(url, headers=None, json=None, timeout=10):
+    def dummy_post(self, method, url, headers=None, json=None, timeout=10):
         query = json["query"]
         record.append(query)
         if "RepoProjects" in query:
@@ -80,7 +80,10 @@ def test_rank_items(monkeypatch):
         },
     ]
     record = []
-    monkeypatch.setattr("requests.post", _mock_post_factory(items, record))
+    monkeypatch.setattr(
+        "src.github.client.ResilientGitHubClient.make_request",
+        _mock_post_factory(items, record),
+    )
     bm = BoardManager("t", "o", "r")
     ranked = bm.rank_items()
     assert [i["number"] for i in ranked] == [1, 2]
@@ -121,7 +124,10 @@ def test_reorder_items(monkeypatch):
         },
     ]
     record = []
-    monkeypatch.setattr("requests.post", _mock_post_factory(items, record))
+    monkeypatch.setattr(
+        "src.github.client.ResilientGitHubClient.make_request",
+        _mock_post_factory(items, record),
+    )
     bm = BoardManager("t", "o", "r")
     bm.reorder_items()
     # ensure mutation called to move it2 after it1, but not for pinned item it1

@@ -1,6 +1,7 @@
 """GitHub integration utilities."""
 
 from .board_manager import BoardManager, GraphQLClient
+from .client import ResilientGitHubClient
 from .device_flow import DeviceFlowResponse, GitHubDeviceFlow, OAuthError
 from .issue_manager import IssueManager
 from .pat_scopes import (
@@ -23,4 +24,5 @@ __all__ = [
     "SecureTokenStorage",
     "validate_token",
     "refresh_token_if_needed",
+    "ResilientGitHubClient",
 ]
