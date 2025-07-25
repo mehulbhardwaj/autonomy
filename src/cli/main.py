@@ -34,7 +34,7 @@ Table = None
 
 def _ensure_imports() -> None:
     """Load heavy dependencies if not already loaded."""
-    global click, requests, Console
+    global click, requests, Console, Table
     global WorkflowConfig, SecretVault, WorkflowManager
     global REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
     global GitHubDeviceFlow, SecureTokenStorage, refresh_token_if_needed, validate_token
@@ -960,6 +960,8 @@ def cmd_board_init(manager: WorkflowManager, args) -> int:
     """Initialize project board fields."""
     from ..github.board_manager import BoardManager
 
+    _ensure_imports()
+
     cache_path = (
         Path(args.cache).expanduser()
         if getattr(args, "cache", None)
@@ -979,6 +981,7 @@ def cmd_board_init(manager: WorkflowManager, args) -> int:
 @handle_errors
 def cmd_board_rank(manager: WorkflowManager, args) -> int:
     """Show ranked project board items."""
+    _ensure_imports()
     from ..github.board_manager import BoardManager
 
     bm = BoardManager(
@@ -1008,6 +1011,7 @@ def cmd_board_rank(manager: WorkflowManager, args) -> int:
 @handle_errors
 def cmd_board_reorder(manager: WorkflowManager, args) -> int:
     """Reorder board items by ranking."""
+    _ensure_imports()
     from ..github.board_manager import BoardManager
 
     bm = BoardManager(
