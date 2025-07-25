@@ -78,6 +78,11 @@ We welcome contributions from developers interested in AI-human collaboration an
 
 ---
 
+### Release Strategy
+
+Stable releases are tagged from the `main` branch. Testing releases use commits from the `testing` branch and are published as pre-releases. Development work should occur on feature branches that merge into `testing` before stabilizing in `main`.
+
+
 ## 📄 License
 
 This project is licensed under the GNU GPLv3 or later - see the [LICENSE](LICENSE) file for details.

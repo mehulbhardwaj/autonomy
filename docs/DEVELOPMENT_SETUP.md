@@ -36,3 +36,7 @@ pre-commit install
   pytest
   ```
 The test configuration enforces a minimum of 80% coverage.
+## Branching and Releases
+
+Create feature branches from `testing` for development. The `testing` branch is used to publish pre-release versions. Stable releases are tagged from `main`. When a feature is ready, merge it into `testing`; after validation it can be promoted to `main`.
+

@@ -54,3 +54,8 @@ Issues progress through these states:
 - All tests must pass
 - No direct pushes allowed
 - Human approval required for merge
+
+## Release Process
+
+Stable releases are created from the `main` branch. A testing branch named `testing` is used for pre-release builds. Feature development should occur on separate branches that merge into `testing` before being promoted to `main`. Tags on `main` trigger stable releases, while tags on `testing` create pre-releases.
+
