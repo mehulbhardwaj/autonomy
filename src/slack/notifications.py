@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any, Callable, Dict, List
 
 from .bot import SlackBot
@@ -219,7 +220,7 @@ class SystemNotifier:
 
 
 class NotificationScheduler:
-    """Simple in-memory notification scheduler."""
+    """Minimal scheduler for Slack notifications."""
 
     def __init__(self, slack_client: SlackBot) -> None:
         self.slack_client = slack_client
@@ -233,6 +234,7 @@ class NotificationScheduler:
             "time": time,
             "func": func,
             "channel": channel,
+            "next_run": datetime.now(),
         }
 
     def schedule_weekly(
@@ -244,8 +246,23 @@ class NotificationScheduler:
             "time": time,
             "func": func,
             "channel": channel,
+            "next_run": datetime.now(),
         }
 
-    def run_scheduler(self) -> None:
-        for entry in self.schedule.values():
-            entry["func"](entry["channel"])
+    def run_scheduler(self, block: bool = False, interval: int = 60) -> None:
+        """Run scheduled tasks once or in a loop when ``block`` is True."""
+
+        def _run_due() -> None:
+            now = datetime.now()
+            for entry in self.schedule.values():
+                if entry["next_run"] <= now:
+                    entry["func"](entry["channel"])
+                    if entry["frequency"] == "daily":
+                        entry["next_run"] = now + timedelta(days=1)
+                    else:
+                        entry["next_run"] = now + timedelta(days=7)
+
+        _run_due()
+        while block:
+            time.sleep(interval)
+            _run_due()

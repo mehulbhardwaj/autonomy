@@ -39,6 +39,7 @@ from .slack import (
     verify_slack_signature,
 )
 from .tasks.backlog_doctor import BacklogDoctor
+from .tasks.nightly_service import NightlyDoctorService
 from .tasks.task_manager import TaskManager
 from .tools import GitHubTools, MemoryTools, SlackTools, ToolRegistry
 
@@ -76,6 +77,7 @@ __all__ = [
     # Planning
     "TaskManager",
     "BacklogDoctor",
+    "NightlyDoctorService",
     "SecretVault",
     # Version info
     "__version__",

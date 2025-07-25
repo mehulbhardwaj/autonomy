@@ -147,6 +147,15 @@ Environment Variables:
         "--oversized", action="store_true", help="Check only oversized issues"
     )
 
+    nightly_parser = doctor_sub.add_parser(
+        "nightly", help="Schedule nightly backlog digest"
+    )
+    nightly_parser.add_argument("--repos", nargs="+", help="owner/repo list")
+    nightly_parser.add_argument("--channel", default="#autonomy-daily")
+    nightly_parser.add_argument("--time", default="02:00")
+    nightly_parser.add_argument("--slack-token")
+    nightly_parser.add_argument("--forever", action="store_true")
+
     # Board command
     board_parser = subparsers.add_parser("board", help="Manage project board")
     board_sub = board_parser.add_subparsers(dest="board_cmd")
@@ -356,6 +365,8 @@ Environment Variables:
         elif args.command == "doctor":
             if args.doctor_cmd == "run":
                 return cmd_doctor(manager, args)
+            if args.doctor_cmd == "nightly":
+                return cmd_doctor_nightly(manager, vault, args)
             print(f"Unknown doctor command: {args.doctor_cmd}")
             return 1
         elif args.command == "board":
@@ -747,6 +758,37 @@ def cmd_doctor(manager: WorkflowManager, args) -> int:
             print(f"  #{a} <-> #{b}")
     if results["oversized"]:
         print(f"Oversized issues: {', '.join(map(str, results['oversized']))}")
+    return 0
+
+
+def cmd_doctor_nightly(manager: WorkflowManager, vault: SecretVault, args) -> int:
+    """Schedule nightly backlog doctor runs."""
+    from ..github.issue_manager import IssueManager
+    from ..slack import SlackBot
+    from ..slack.notifications import NotificationScheduler
+    from ..tasks.backlog_doctor import BacklogDoctor
+
+    slack_token = args.slack_token or vault.get_secret("slack_token")
+    if not slack_token:
+        print("Error: Slack token not found")
+        return 1
+
+    scheduler = NotificationScheduler(SlackBot(slack_token))
+    repos = args.repos or [f"{manager.owner}/{manager.repo}"]
+
+    for repo in repos:
+        owner, name = repo.split("/")
+        mgr = IssueManager(manager.github_token, owner, name)
+        doctor = BacklogDoctor(mgr, scheduler.slack_client)
+
+        scheduler.schedule_daily(
+            name=repo,
+            time=args.time,
+            func=lambda ch=args.channel, d=doctor: d.run_nightly_diagnosis(channel=ch),
+            channel=args.channel,
+        )
+
+    scheduler.run_scheduler(block=args.forever)
     return 0
 
 
