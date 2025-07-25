@@ -63,7 +63,10 @@ pytest
 - **[Technical Architecture](docs/TECH.md)**
 - **[Development Setup](docs/DEVELOPMENT_SETUP.md)**
 - **[Test Strategy](docs/TEST.md)**
-- **[Planning Agent PRD](docs/PRD.md)**
+- **[User Guide](docs/USER_GUIDE.md)**
+- **[Installation](docs/INSTALLATION.md)**
+- **[Configuration](docs/CONFIGURATION.md)**
+- **[API Reference](docs/API.md)**
 
 ---
 
