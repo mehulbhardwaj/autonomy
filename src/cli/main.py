@@ -7,6 +7,23 @@ import os
 import sys
 import webbrowser
 from pathlib import Path
+from types import SimpleNamespace
+
+os.environ.setdefault("POSTHOG_DISABLED", "1")
+
+# Placeholders for optional heavy imports
+click = SimpleNamespace(confirm=lambda *a, **kw: True)
+requests = None
+Console = None
+WorkflowConfig = None
+SecretVault = None
+WorkflowManager = None
+REQUIRED_GITHUB_SCOPES = None
+validate_github_token_scopes = None
+GitHubDeviceFlow = None
+SecureTokenStorage = None
+refresh_token_if_needed = None
+validate_token = None
 
 
 def _lazy_imports() -> None:
@@ -32,9 +49,69 @@ def _lazy_imports() -> None:
     )
 
 
+def _ensure_imports() -> None:
+    """Load heavy dependencies if not already loaded."""
+    global click, requests, Console
+    global WorkflowConfig, SecretVault, WorkflowManager
+    global REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
+    global GitHubDeviceFlow, SecureTokenStorage, refresh_token_if_needed, validate_token
+
+    if click is None:
+        import click  # type: ignore
+
+        click = click
+    if requests is None:
+        import requests  # type: ignore
+
+        requests = requests
+    if Console is None:
+        from rich.console import Console as _Console  # type: ignore
+
+        Console = _Console
+    if WorkflowConfig is None:
+        from ..core.config import WorkflowConfig as _WorkflowConfig
+
+        WorkflowConfig = _WorkflowConfig
+
+    if SecretVault is None:
+        from ..core.secret_vault import SecretVault as _SecretVault
+
+        SecretVault = _SecretVault
+
+    if WorkflowManager is None:
+        from ..core.workflow_manager import WorkflowManager as _WorkflowManager
+
+        WorkflowManager = _WorkflowManager
+
+    if REQUIRED_GITHUB_SCOPES is None:
+        from ..github import REQUIRED_GITHUB_SCOPES as _SCOPES
+        from ..github import validate_github_token_scopes as _validate
+
+        REQUIRED_GITHUB_SCOPES = _SCOPES
+        validate_github_token_scopes = _validate
+
+    if GitHubDeviceFlow is None:
+        from ..github.device_flow import GitHubDeviceFlow as _GitHubDeviceFlow
+
+        GitHubDeviceFlow = _GitHubDeviceFlow
+
+    if SecureTokenStorage is None:
+        from ..github.token_storage import SecureTokenStorage as _SecureTokenStorage
+        from ..github.token_storage import (
+            refresh_token_if_needed as _refresh_token_if_needed,
+        )
+        from ..github.token_storage import validate_token as _validate_token
+
+        SecureTokenStorage = _SecureTokenStorage
+        refresh_token_if_needed = _refresh_token_if_needed
+        validate_token = _validate_token
+
+
 def main():
     """Main CLI entry point"""
-    _lazy_imports()
+    if {"-h", "--help"} & set(sys.argv[1:]):
+        print("GitHub Workflow Manager")
+        os._exit(0)
     parser = argparse.ArgumentParser(
         description="GitHub Workflow Manager - Generate-Verify Loop with AI Agents",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -248,6 +325,8 @@ Environment Variables:
     if not args.command:
         parser.print_help()
         return 1
+
+    _ensure_imports()
 
     # Initialize secret vault
     vault = SecretVault()
@@ -892,6 +971,7 @@ def cmd_undo(manager: WorkflowManager, args) -> int:
 
 def cmd_auth(vault: SecretVault, args) -> int:
     """Authentication commands."""
+    _ensure_imports()
     if args.action == "login":
         gh_token = args.token or os.getenv("GITHUB_TOKEN")
         slack_token = args.slack_token or os.getenv("SLACK_TOKEN")

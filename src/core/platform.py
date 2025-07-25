@@ -5,7 +5,6 @@ from collections import OrderedDict
 from typing import Any, Type
 
 import requests
-
 from langchain_community.embeddings import FakeEmbeddings
 from mem0.client.main import MemoryClient as RemoteMemoryClient
 from mem0.memory.main import Memory
@@ -91,11 +90,11 @@ class Mem0Client:  # pragma: no cover - uses real Mem0 backend
 
 
 class CachedMem0Client:
-    """Lazily initialize Mem0Client and cache results."""
+    """Lazily initialize ``Mem0Client`` and cache search results."""
 
     def __init__(self) -> None:
         self._client: Mem0Client | None = None
-        self._cache: dict[str, str] = {}
+        self._cache: dict[tuple[str, str], str] = {}
 
     @property
     def client(self) -> Mem0Client:
@@ -103,19 +102,23 @@ class CachedMem0Client:
             self._client = Mem0Client()
         return self._client
 
-    def search(self, query: str, repository: str = "default") -> str:
-        key = f"{repository}:{query}"
+    @property
+    def store(self) -> dict[str, OrderedDict[str, str]]:
+        return self.client.store
+
+    def search(self, query: str, filter_metadata: dict | None = None) -> str:
+        repo = filter_metadata.get("repository") if filter_metadata else "default"
+        key = (repo, query)
         if key in self._cache:
             return self._cache[key]
-        result = self.client.search(query, {"repository": repository})
+        result = self.client.search(query, filter_metadata)
         if result:
             self._cache[key] = result
         return result
 
-    def add(self, data: dict[str, str], repository: str = "default") -> bool:
+    def add(self, data: dict[str, str]) -> bool:
         self._cache.clear()
-        payload = {**data, "repository": repository}
-        return self.client.add(payload)
+        return self.client.add(data)
 
 
 class AutonomyPlatform:
@@ -155,7 +158,9 @@ class AutonomyPlatform:
         else:
             from ..github.issue_manager import IssueManager
 
-            self.github = GitHubTools(IssueManager("", "", "", session=self.get_session()))
+            self.github = GitHubTools(
+                IssueManager("", "", "", session=self.get_session())
+            )
 
         if slack_token:
             from ..slack.bot import SlackBot
