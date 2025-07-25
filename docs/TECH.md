@@ -550,7 +550,37 @@ class PlanningWorkflow(BaseWorkflow):
             message=f"New plan ready for review: {pr.url}"
         )
         
-        return {"pr_created": pr.url, **state}
+return {"pr_created": pr.url, **state}
+```
+
+### Authentication Flow
+```mermaid
+sequenceDiagram
+    participant U as CLI User
+    participant CLI as CLI App
+    participant GH as GitHub OAuth
+    participant S as SecureTokenStorage
+    U->>CLI: auth login
+    CLI->>GH: start device flow
+    GH-->>CLI: device_code,user_code
+    CLI->>U: show verification URL
+    U->>GH: authorize device
+    CLI->>GH: poll for token
+    GH-->>CLI: access_token
+    CLI->>S: store token
+    CLI-->>U: authenticated
+```
+
+### Ranking Engine Loop
+```mermaid
+sequenceDiagram
+    participant TM as TaskManager
+    participant RE as RankingEngine
+    participant CFG as YAML Config
+    TM->>RE: score_issue(issue)
+    RE->>CFG: load weights
+    RE-->>TM: priority score
+    TM->>TM: sort issues by score
 ```
 
 ---
