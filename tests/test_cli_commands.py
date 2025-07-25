@@ -1,12 +1,15 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+import src.cli.main as main
 from src.cli.main import (
     cmd_audit,
     cmd_board_init,
+    cmd_completion,
     cmd_doctor,
     cmd_doctor_nightly,
     cmd_init,
+    cmd_interactive,
     cmd_list,
     cmd_metrics_daily,
     cmd_next,
@@ -387,3 +390,22 @@ def test_cmd_pin_unpin_and_list(monkeypatch, tmp_path: Path, capsys):
     assert "#5" in out
     args_unpin = SimpleNamespace(issue=5)
     assert cmd_unpin(manager, args_unpin) == 0
+
+
+def test_cmd_completion(tmp_path: Path, capsys):
+    parser = main.build_parser()
+    args = SimpleNamespace(shell="bash")
+    assert cmd_completion(parser, args) == 0
+    out = capsys.readouterr().out
+    assert "register-python-argcomplete" in out
+
+
+def test_cmd_interactive(monkeypatch, tmp_path: Path, capsys):
+    manager = DummyManager(tmp_path)
+    parser = main.build_parser()
+    inputs = iter(["help", "quit"])
+    monkeypatch.setattr("builtins.input", lambda *a: next(inputs))
+    monkeypatch.setattr(main, "_dispatch_command", lambda *a, **kw: 0)
+    assert cmd_interactive(manager, parser) == 0
+    out = capsys.readouterr().out
+    assert "Interactive Shell" in out

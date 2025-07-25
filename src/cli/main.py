@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shlex
 import sys
 import webbrowser
 from pathlib import Path
@@ -114,11 +115,8 @@ def _ensure_imports() -> None:
         validate_token = _validate_token
 
 
-def main():
-    """Main CLI entry point"""
-    if {"-h", "--help"} & set(sys.argv[1:]):
-        print("GitHub Workflow Manager")
-        os._exit(0)
+def build_parser() -> argparse.ArgumentParser:
+    """Construct and return the CLI argument parser."""
     parser = argparse.ArgumentParser(
         description="GitHub Workflow Manager - Generate-Verify Loop with AI Agents",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -199,6 +197,9 @@ Environment Variables:
     )
     next_parser.add_argument("--assignee", help="Filter by assignee")
     next_parser.add_argument("--team", help="Filter by team")
+    next_parser.add_argument(
+        "--json", action="store_true", help="Output result as JSON"
+    )
 
     # Update command
     update_parser = subparsers.add_parser(
@@ -262,10 +263,7 @@ Environment Variables:
     board_parser = subparsers.add_parser("board", help="Manage project board")
     board_sub = board_parser.add_subparsers(dest="board_cmd")
     board_init_parser = board_sub.add_parser("init", help="Initialize board fields")
-    board_init_parser.add_argument(
-        "--cache",
-        help="Path to field cache file",
-    )
+    board_init_parser.add_argument("--cache", help="Path to field cache file")
 
     # Planning commands
     plan_parser = subparsers.add_parser("plan", help="Run planning workflow")
@@ -327,6 +325,93 @@ Environment Variables:
         help="Show Slack OAuth install URL (with action=slack)",
     )
 
+    # New commands
+    subparsers.add_parser("interactive", help="Start interactive shell")
+    comp_parser = subparsers.add_parser(
+        "completion", help="Output shell completion script"
+    )
+    comp_parser.add_argument(
+        "--shell", default="bash", choices=["bash", "zsh"], help="Shell type"
+    )
+
+    return parser
+
+
+def _dispatch_command(
+    manager: WorkflowManager, vault: SecretVault, parser: argparse.ArgumentParser, args
+) -> int:
+    """Dispatch CLI command to its handler."""
+    if args.command == "setup":
+        return cmd_setup(manager, args)
+    if args.command == "process":
+        return cmd_process(manager, args)
+    if args.command == "init":
+        return cmd_init(manager, args)
+    if args.command == "status":
+        return cmd_status(manager, args)
+    if args.command == "next":
+        return cmd_next(manager, args)
+    if args.command == "update":
+        return cmd_update(manager, args)
+    if args.command == "list":
+        return cmd_list(manager, args)
+    if args.command == "pin":
+        return cmd_pin(manager, args)
+    if args.command == "unpin":
+        return cmd_unpin(manager, args)
+    if args.command == "plan":
+        return cmd_plan(manager, args)
+    if args.command == "explain":
+        return cmd_explain(manager, args)
+    if args.command == "tune":
+        return cmd_tune(manager, args)
+    if args.command == "rerank":
+        return cmd_rerank(manager, args)
+    if args.command == "assign":
+        return cmd_assign(manager, args)
+    if args.command == "breakdown":
+        return cmd_breakdown(manager, args)
+    if args.command == "memory":
+        return cmd_memory(manager, args)
+    if args.command == "doctor":
+        if args.doctor_cmd == "run":
+            return cmd_doctor(manager, args)
+        if args.doctor_cmd == "nightly":
+            return cmd_doctor_nightly(manager, vault, args)
+        print(f"Unknown doctor command: {args.doctor_cmd}")
+        return 1
+    if args.command == "metrics":
+        return cmd_metrics_daily(manager, vault, args)
+    if args.command == "board":
+        if args.board_cmd == "init":
+            return cmd_board_init(manager, args)
+        print(f"Unknown board command: {args.board_cmd}")
+        return 1
+    if args.command == "audit":
+        if args.audit_cmd == "log":
+            return cmd_audit(manager, args)
+        print(f"Unknown audit command: {args.audit_cmd}")
+        return 1
+    if args.command == "undo":
+        return cmd_undo(manager, args)
+    if args.command == "slack":
+        return cmd_slack(vault, args)
+    if args.command == "auth":
+        return cmd_auth(vault, args)
+    if args.command == "interactive":
+        return cmd_interactive(manager, parser)
+    if args.command == "completion":
+        return cmd_completion(parser, args)
+    print(f"Unknown command: {args.command}")
+    return 1
+
+
+def main():
+    """Main CLI entry point"""
+    if {"-h", "--help"} & set(sys.argv[1:]):
+        print("GitHub Workflow Manager")
+        os._exit(0)
+    parser = build_parser()
     args = parser.parse_args()
 
     if not args.command:
@@ -434,66 +519,7 @@ Environment Variables:
 
     # Execute command
     try:
-        if args.command == "setup":
-            return cmd_setup(manager, args)
-        elif args.command == "process":
-            return cmd_process(manager, args)
-        elif args.command == "init":
-            return cmd_init(manager, args)
-        elif args.command == "status":
-            return cmd_status(manager, args)
-        elif args.command == "next":
-            return cmd_next(manager, args)
-        elif args.command == "update":
-            return cmd_update(manager, args)
-        elif args.command == "list":
-            return cmd_list(manager, args)
-        elif args.command == "pin":
-            return cmd_pin(manager, args)
-        elif args.command == "unpin":
-            return cmd_unpin(manager, args)
-        elif args.command == "plan":
-            return cmd_plan(manager, args)
-        elif args.command == "explain":
-            return cmd_explain(manager, args)
-        elif args.command == "tune":
-            return cmd_tune(manager, args)
-        elif args.command == "rerank":
-            return cmd_rerank(manager, args)
-        elif args.command == "assign":
-            return cmd_assign(manager, args)
-        elif args.command == "breakdown":
-            return cmd_breakdown(manager, args)
-        elif args.command == "memory":
-            return cmd_memory(manager, args)
-        elif args.command == "doctor":
-            if args.doctor_cmd == "run":
-                return cmd_doctor(manager, args)
-            if args.doctor_cmd == "nightly":
-                return cmd_doctor_nightly(manager, vault, args)
-            print(f"Unknown doctor command: {args.doctor_cmd}")
-            return 1
-        elif args.command == "metrics":
-            return cmd_metrics_daily(manager, vault, args)
-        elif args.command == "board":
-            if args.board_cmd == "init":
-                return cmd_board_init(manager, args)
-            print(f"Unknown board command: {args.board_cmd}")
-            return 1
-        elif args.command == "audit":
-            if args.audit_cmd == "log":
-                return cmd_audit(manager, args)
-            print(f"Unknown audit command: {args.audit_cmd}")
-            return 1
-        elif args.command == "undo":
-            return cmd_undo(manager, args)
-        elif args.command == "slack":
-            return cmd_slack(vault, args)
-        elif args.command == "auth":
-            return cmd_auth(vault, args)
-        else:
-            print(f"Unknown command: {args.command}")
-            return 1
+        return _dispatch_command(manager, vault, parser, args)
     except Exception as e:
         print(f"Error executing command: {e}")
         if args.verbose:
@@ -516,25 +542,32 @@ def cmd_setup(manager: WorkflowManager, args) -> int:
 @handle_errors
 def cmd_process(manager: WorkflowManager, args) -> int:
     """Process issue command"""
-    print(f"Processing issue #{args.issue} through Generate-Verify loop...")
+    console = Console()
+    console.print(f"Processing issue #{args.issue} through Generate-Verify loop...")
+    from rich.progress import Progress
 
-    result = manager.process_issue(args.issue)
+    with Progress(transient=True) as progress:
+        task = progress.add_task("Running", total=None)
+        result = manager.process_issue(args.issue)
+        progress.update(task, completed=1)
 
     if result.get("error"):
-        print(f"✗ Error: {result['error']}")
+        console.print(f"[red]✗ Error: {result['error']}[/red]")
         return 1
 
-        print(f"✓ Issue #{args.issue} processed")
-        print(f"  Status: {result.get('status', 'unknown')}")
-        print(f"  Phases completed: {', '.join(result.get('phases_completed', []))}")
+    console.print(f"[green]✓ Issue #{args.issue} processed[/green]")
+    console.print(f"  Status: {result.get('status', 'unknown')}")
+    console.print(
+        f"  Phases completed: {', '.join(result.get('phases_completed', []))}"
+    )
 
-        if result.get("artifacts_created"):
-            print(f"  Artifacts created: {len(result['artifacts_created'])}")
-            for artifact in result["artifacts_created"]:
-                print(f"    - {artifact}")
+    if result.get("artifacts_created"):
+        console.print(f"  Artifacts created: {len(result['artifacts_created'])}")
+        for artifact in result["artifacts_created"]:
+            console.print(f"    - {artifact}")
 
     if result.get("next_action"):
-        print(f"  Next action: {result['next_action']}")
+        console.print(f"  Next action: {result['next_action']}")
 
     return 0
 
@@ -583,6 +616,7 @@ def cmd_status(manager: WorkflowManager, args) -> int:
 
 def cmd_next(manager: WorkflowManager, args) -> int:
     """Return the next best task."""
+    _ensure_imports()
     from ..tasks.task_manager import TaskManager
 
     tm = TaskManager(manager.github_token, manager.owner, manager.repo)
@@ -593,14 +627,30 @@ def cmd_next(manager: WorkflowManager, args) -> int:
     )
     issue, breakdown = result if isinstance(result, tuple) else (result, {})
     if not issue:
-        print("No tasks found")
+        Console().print("No tasks found")
         return 0
 
     score = tm._score_issue(issue)
-    print(f"Next task: #{issue.get('number')} - {issue.get('title')}")
-    print(f"Priority score: {score:.2f}")
-    for k, v in breakdown.items():
-        print(f"  {k}: {v}")
+    if getattr(args, "json", False):
+        import json
+
+        Console().print(
+            json.dumps(
+                {
+                    "number": issue.get("number"),
+                    "title": issue.get("title"),
+                    "score": score,
+                    "breakdown": breakdown,
+                },
+                indent=2,
+            )
+        )
+    else:
+        console = Console()
+        console.print(f"Next task: #{issue.get('number')} - {issue.get('title')}")
+        console.print(f"Priority score: {score:.2f}")
+        for k, v in breakdown.items():
+            console.print(f"  {k}: {v}")
     return 0
 
 
@@ -1142,6 +1192,38 @@ def cmd_slack(vault: SecretVault, args) -> int:
 
     print(f"Unknown Slack command: {args.slack_cmd}")
     return 1
+
+
+def cmd_completion(parser: argparse.ArgumentParser, args) -> int:
+    """Output shell completion script."""
+    shell = args.shell
+    print(f'eval "$(register-python-argcomplete --shell {shell} autonomy)"')
+    return 0
+
+
+def cmd_interactive(manager: WorkflowManager, parser: argparse.ArgumentParser) -> int:
+    """Simple interactive shell for CLI commands."""
+    _ensure_imports()
+    console = Console()
+    vault = SecretVault()
+    console.print(
+        "[bold green]Autonomy Interactive Shell[/bold green] (type 'quit' to exit)"
+    )
+    while True:
+        try:
+            line = input("autonomy> ")
+        except EOFError:
+            break
+        if not line:
+            continue
+        if line.strip() in {"quit", "exit"}:
+            break
+        try:
+            sub_args = parser.parse_args(shlex.split(line))
+            _dispatch_command(manager, vault, parser, sub_args)
+        except SystemExit:
+            console.print("[red]Invalid command[/red]")
+    return 0
 
 
 def _create_web_template(workspace_path: Path) -> None:
