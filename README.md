@@ -6,7 +6,7 @@
 
 **Extensible agentic platform enabling humans + AI to collaborate for knowledge work** – An intelligent GitHub planning system with configurable AI agents that learn from your team's patterns and coordinate tasks across humans and specialized AI assistants.
 
-https://useautonomy.vercel.app/
+https://autonomyhub.vercel.app
 ---
 
 ## 🎯 Vision
