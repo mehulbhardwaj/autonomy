@@ -52,7 +52,9 @@ class MetricsCollector:
         return float(func())
 
     def calculate_wau(self) -> int:
-        func = getattr(self.audit, "weekly_active_users", lambda: 0)
+        if hasattr(self.audit, "weekly_active_users"):
+            return int(self.audit.weekly_active_users())
+        func = getattr(self.github, "weekly_active_users", lambda: 0)
         return int(func())
 
     def calculate_loc_per_assignee(self) -> int:

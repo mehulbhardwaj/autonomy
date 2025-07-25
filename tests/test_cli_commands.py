@@ -8,6 +8,7 @@ from src.cli.main import (
     cmd_doctor_nightly,
     cmd_init,
     cmd_list,
+    cmd_metrics_daily,
     cmd_next,
     cmd_pin,
     cmd_process,
@@ -338,6 +339,28 @@ def test_cmd_doctor_nightly(monkeypatch, tmp_path: Path):
         forever=False,
     )
     assert cmd_doctor_nightly(manager, SecretVault(), args) == 0
+
+
+def test_cmd_metrics_daily(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+
+    class DummyService:
+        def __init__(self, mapping, token, slack_token, run_time="09:00", **kw):
+            self.called = False
+
+        def run(self, forever=False):
+            self.called = True
+
+    monkeypatch.setattr("src.tasks.metrics_service.DailyMetricsService", DummyService)
+
+    args = SimpleNamespace(
+        repos=["owner/repo"],
+        channel="#m",
+        time="09:00",
+        slack_token="t",
+        forever=False,
+    )
+    assert cmd_metrics_daily(manager, SecretVault(), args) == 0
 
 
 def test_cmd_audit_and_undo(tmp_path: Path):

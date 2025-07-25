@@ -39,6 +39,7 @@ from .slack import (
     verify_slack_signature,
 )
 from .tasks.backlog_doctor import BacklogDoctor
+from .tasks.metrics_service import DailyMetricsService
 from .tasks.nightly_service import NightlyDoctorService
 from .tasks.task_manager import TaskManager
 from .tools import GitHubTools, MemoryTools, SlackTools, ToolRegistry
@@ -78,6 +79,7 @@ __all__ = [
     "TaskManager",
     "BacklogDoctor",
     "NightlyDoctorService",
+    "DailyMetricsService",
     "SecretVault",
     # Version info
     "__version__",

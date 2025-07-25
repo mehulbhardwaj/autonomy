@@ -156,6 +156,15 @@ Environment Variables:
     nightly_parser.add_argument("--slack-token")
     nightly_parser.add_argument("--forever", action="store_true")
 
+    metrics_parser = subparsers.add_parser(
+        "metrics", help="Schedule daily metrics digest"
+    )
+    metrics_parser.add_argument("--repos", nargs="+", help="owner/repo list")
+    metrics_parser.add_argument("--channel", default="#autonomy-metrics")
+    metrics_parser.add_argument("--time", default="09:00")
+    metrics_parser.add_argument("--slack-token")
+    metrics_parser.add_argument("--forever", action="store_true")
+
     # Board command
     board_parser = subparsers.add_parser("board", help="Manage project board")
     board_sub = board_parser.add_subparsers(dest="board_cmd")
@@ -369,6 +378,8 @@ Environment Variables:
                 return cmd_doctor_nightly(manager, vault, args)
             print(f"Unknown doctor command: {args.doctor_cmd}")
             return 1
+        elif args.command == "metrics":
+            return cmd_metrics_daily(manager, vault, args)
         elif args.command == "board":
             if args.board_cmd == "init":
                 return cmd_board_init(manager, args)
@@ -789,6 +800,28 @@ def cmd_doctor_nightly(manager: WorkflowManager, vault: SecretVault, args) -> in
         )
 
     scheduler.run_scheduler(block=args.forever)
+    return 0
+
+
+def cmd_metrics_daily(manager: WorkflowManager, vault: SecretVault, args) -> int:
+    """Schedule daily metrics reporting."""
+    from ..tasks.metrics_service import DailyMetricsService
+
+    slack_token = args.slack_token or vault.get_secret("slack_token")
+    if not slack_token:
+        print("Error: Slack token not found")
+        return 1
+
+    repos = args.repos or [f"{manager.owner}/{manager.repo}"]
+    service = DailyMetricsService(
+        {repo: args.channel for repo in repos},
+        manager.github_token,
+        slack_token,
+        run_time=args.time,
+        storage_path=Path(manager.workspace_path) / "metrics",
+        log_path=Path(manager.workspace_path) / "audit.log",
+    )
+    service.run(forever=args.forever)
     return 0
 
 
