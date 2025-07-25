@@ -1,6 +1,6 @@
-"""
-Command Line Interface for GitHub Workflow Manager
-"""
+"""Command Line Interface for GitHub Workflow Manager"""
+
+from __future__ import annotations
 
 import argparse
 import os
@@ -8,24 +8,33 @@ import sys
 import webbrowser
 from pathlib import Path
 
-import click
-import requests
-from rich.console import Console
 
-from ..core.config import WorkflowConfig
-from ..core.secret_vault import SecretVault
-from ..core.workflow_manager import WorkflowManager
-from ..github import REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
-from ..github.device_flow import GitHubDeviceFlow
-from ..github.token_storage import (
-    SecureTokenStorage,
-    refresh_token_if_needed,
-    validate_token,
-)
+def _lazy_imports() -> None:
+    """Import heavy modules lazily."""
+    global click, requests, Console
+    global WorkflowConfig, SecretVault, WorkflowManager
+    global REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
+    global GitHubDeviceFlow, SecureTokenStorage, refresh_token_if_needed, validate_token
+
+    import click  # type: ignore
+    import requests  # type: ignore
+    from rich.console import Console  # type: ignore
+
+    from ..core.config import WorkflowConfig
+    from ..core.secret_vault import SecretVault
+    from ..core.workflow_manager import WorkflowManager
+    from ..github import REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
+    from ..github.device_flow import GitHubDeviceFlow
+    from ..github.token_storage import (
+        SecureTokenStorage,
+        refresh_token_if_needed,
+        validate_token,
+    )
 
 
 def main():
     """Main CLI entry point"""
+    _lazy_imports()
     parser = argparse.ArgumentParser(
         description="GitHub Workflow Manager - Generate-Verify Loop with AI Agents",
         formatter_class=argparse.RawDescriptionHelpFormatter,

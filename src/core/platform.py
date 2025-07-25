@@ -4,6 +4,8 @@ import os
 from collections import OrderedDict
 from typing import Any, Type
 
+import requests
+
 from langchain_community.embeddings import FakeEmbeddings
 from mem0.client.main import MemoryClient as RemoteMemoryClient
 from mem0.memory.main import Memory
@@ -88,8 +90,45 @@ class Mem0Client:  # pragma: no cover - uses real Mem0 backend
         return True
 
 
+class CachedMem0Client:
+    """Lazily initialize Mem0Client and cache results."""
+
+    def __init__(self) -> None:
+        self._client: Mem0Client | None = None
+        self._cache: dict[str, str] = {}
+
+    @property
+    def client(self) -> Mem0Client:
+        if self._client is None:
+            self._client = Mem0Client()
+        return self._client
+
+    def search(self, query: str, repository: str = "default") -> str:
+        key = f"{repository}:{query}"
+        if key in self._cache:
+            return self._cache[key]
+        result = self.client.search(query, {"repository": repository})
+        if result:
+            self._cache[key] = result
+        return result
+
+    def add(self, data: dict[str, str], repository: str = "default") -> bool:
+        self._cache.clear()
+        payload = {**data, "repository": repository}
+        return self.client.add(payload)
+
+
 class AutonomyPlatform:
     """Shared foundation for all workflows."""
+
+    _shared_session: requests.Session | None = None
+
+    @classmethod
+    def get_session(cls) -> requests.Session:
+        """Return a shared requests session."""
+        if cls._shared_session is None:
+            cls._shared_session = requests.Session()
+        return cls._shared_session
 
     def __init__(
         self,
@@ -100,18 +139,23 @@ class AutonomyPlatform:
         repo: str | None = None,
         slack_token: str | None = None,
     ):
-        self.memory = Mem0Client()
+        self.memory = CachedMem0Client()
         self.llm = OpenRouterClient(api_key=api_key)
         self.model_selector = model_selector or ModelSelector()
         if github_token and owner and repo:
             from ..github.issue_manager import IssueManager
 
-            manager = IssueManager(github_token, owner, repo)
+            manager = IssueManager(
+                github_token,
+                owner,
+                repo,
+                session=self.get_session(),
+            )
             self.github = GitHubTools(manager)
         else:
             from ..github.issue_manager import IssueManager
 
-            self.github = GitHubTools(IssueManager("", "", ""))
+            self.github = GitHubTools(IssueManager("", "", "", session=self.get_session()))
 
         if slack_token:
             from ..slack.bot import SlackBot
