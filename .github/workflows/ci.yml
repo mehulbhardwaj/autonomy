@@ -93,6 +93,9 @@ jobs:
           pytest -o addopts='' tests/test_cli_commands.py::test_cmd_next_none -q
           pytest -o addopts='' tests/test_cli_commands.py::test_cmd_completion -q
           pytest -o addopts='' tests/test_cli_commands.py::test_cmd_interactive -q
+          pytest -o addopts='' tests/test_cli_commands.py::test_cmd_board_rank -q
+          pytest -o addopts='' tests/test_cli_commands.py::test_cmd_board_reorder -q
+          pytest -o addopts='' tests/test_cli_commands.py::test_cmd_configure -q
           pytest -o addopts='' tests/test_api_server.py -q
           pytest -o addopts='' tests/test_ranking_engine.py -q
           pytest -o addopts='' tests/test_planning_workflow.py -q

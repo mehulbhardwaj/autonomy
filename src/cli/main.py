@@ -29,29 +29,7 @@ GitHubDeviceFlow = None
 SecureTokenStorage = None
 refresh_token_if_needed = None
 validate_token = None
-
-
-def _lazy_imports() -> None:
-    """Import heavy modules lazily."""
-    global click, requests, Console
-    global WorkflowConfig, SecretVault, WorkflowManager
-    global REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
-    global GitHubDeviceFlow, SecureTokenStorage, refresh_token_if_needed, validate_token
-
-    import click  # type: ignore
-    import requests  # type: ignore
-    from rich.console import Console  # type: ignore
-
-    from ..core.config import WorkflowConfig
-    from ..core.secret_vault import SecretVault
-    from ..core.workflow_manager import WorkflowManager
-    from ..github import REQUIRED_GITHUB_SCOPES, validate_github_token_scopes
-    from ..github.device_flow import GitHubDeviceFlow
-    from ..github.token_storage import (
-        SecureTokenStorage,
-        refresh_token_if_needed,
-        validate_token,
-    )
+Table = None
 
 
 def _ensure_imports() -> None:
@@ -71,8 +49,10 @@ def _ensure_imports() -> None:
         requests = requests
     if Console is None:
         from rich.console import Console as _Console  # type: ignore
+        from rich.table import Table as _Table  # type: ignore
 
         Console = _Console
+        Table = _Table  # noqa: F841
     if WorkflowConfig is None:
         from ..core.config import WorkflowConfig as _WorkflowConfig
 
@@ -264,6 +244,9 @@ Environment Variables:
     board_sub = board_parser.add_subparsers(dest="board_cmd")
     board_init_parser = board_sub.add_parser("init", help="Initialize board fields")
     board_init_parser.add_argument("--cache", help="Path to field cache file")
+    board_sub.add_parser("reorder", help="Reorder board items by priority")
+    board_rank_parser = board_sub.add_parser("rank", help="Show ranked board items")
+    board_rank_parser.add_argument("--json", action="store_true", help="Output JSON")
 
     # Planning commands
     plan_parser = subparsers.add_parser("plan", help="Run planning workflow")
@@ -334,6 +317,8 @@ Environment Variables:
         "--shell", default="bash", choices=["bash", "zsh"], help="Shell type"
     )
 
+    subparsers.add_parser("configure", help="Create default configuration")
+
     return parser
 
 
@@ -385,6 +370,10 @@ def _dispatch_command(
     if args.command == "board":
         if args.board_cmd == "init":
             return cmd_board_init(manager, args)
+        if args.board_cmd == "reorder":
+            return cmd_board_reorder(manager, args)
+        if args.board_cmd == "rank":
+            return cmd_board_rank(manager, args)
         print(f"Unknown board command: {args.board_cmd}")
         return 1
     if args.command == "audit":
@@ -402,6 +391,8 @@ def _dispatch_command(
         return cmd_interactive(manager, parser)
     if args.command == "completion":
         return cmd_completion(parser, args)
+    if args.command == "configure":
+        return cmd_configure(args)
     print(f"Unknown command: {args.command}")
     return 1
 
@@ -494,14 +485,17 @@ def main():
     if args.config:
         config_path = Path(args.config)
         if config_path.exists():
-            import json
+            if config_path.suffix in {".yml", ".yaml"}:
+                config = WorkflowConfig.from_yaml(config_path)
+            else:
+                import json
 
-            with open(config_path) as f:
-                config_data = json.load(f)
-            config = WorkflowConfig.from_dict(config_data)
+                with open(config_path) as f:
+                    config_data = json.load(f)
+                config = WorkflowConfig.from_dict(config_data)
 
     if not config:
-        config = WorkflowConfig()
+        config = WorkflowConfig.load_default()
 
     manager = None
     if args.command != "auth":
@@ -982,6 +976,51 @@ def cmd_board_init(manager: WorkflowManager, args) -> int:
     return 0
 
 
+@handle_errors
+def cmd_board_rank(manager: WorkflowManager, args) -> int:
+    """Show ranked project board items."""
+    from ..github.board_manager import BoardManager
+
+    bm = BoardManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        cache_path=Path(manager.config.board_cache_path).expanduser(),
+    )
+    items = bm.rank_items()
+    if getattr(args, "json", False):
+        import json
+
+        Console().print(json.dumps(items, indent=2, default=str))
+    else:
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("Issue")
+        table.add_column("Title")
+        table.add_column("Priority")
+        for itm in items:
+            table.add_row(
+                f"#{itm.get('number')}", itm.get("title", ""), str(itm.get("priority"))
+            )
+        Console().print(table)
+    return 0
+
+
+@handle_errors
+def cmd_board_reorder(manager: WorkflowManager, args) -> int:
+    """Reorder board items by ranking."""
+    from ..github.board_manager import BoardManager
+
+    bm = BoardManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        cache_path=Path(manager.config.board_cache_path).expanduser(),
+    )
+    bm.reorder_items()
+    print("✓ Board reordered")
+    return 0
+
+
 def cmd_audit(manager: WorkflowManager, args) -> int:
     """Show audit log entries."""
     for entry in manager.audit_logger.iter_logs():
@@ -1224,6 +1263,20 @@ def cmd_interactive(manager: WorkflowManager, parser: argparse.ArgumentParser) -
         except SystemExit:
             console.print("[red]Invalid command[/red]")
     return 0
+
+
+def cmd_configure(args) -> int:
+    """Write a default configuration file."""
+    _ensure_imports()
+    path = Path.home() / ".autonomy" / "config.yml"
+    cfg = WorkflowConfig.load_default()
+    try:
+        cfg.save_yaml(path)
+        print(f"\N{CHECK MARK} Config written to {path}")
+        return 0
+    except Exception as e:
+        print(f"Error writing config: {e}")
+        return 1
 
 
 def _create_web_template(workspace_path: Path) -> None:

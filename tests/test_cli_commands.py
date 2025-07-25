@@ -5,6 +5,8 @@ import src.cli.main as main
 from src.cli.main import (
     cmd_audit,
     cmd_board_init,
+    cmd_board_rank,
+    cmd_board_reorder,
     cmd_completion,
     cmd_doctor,
     cmd_doctor_nightly,
@@ -281,6 +283,42 @@ def test_cmd_board_init_arg_cache(monkeypatch, tmp_path: Path):
     assert Path(captured["path"]) == via_arg
 
 
+def test_cmd_board_rank(monkeypatch, tmp_path: Path, capsys):
+    manager = DummyManager(tmp_path)
+
+    class DummyBM:
+        def __init__(self, *a, **kw):
+            pass
+
+        def rank_items(self, weights=None):
+            return [{"number": 1, "title": "A", "priority": "P1"}]
+
+    monkeypatch.setattr("src.github.board_manager.BoardManager", DummyBM)
+
+    args = SimpleNamespace(board_cmd="rank", json=False)
+    assert cmd_board_rank(manager, args) == 0
+    out = capsys.readouterr().out
+    assert "#1" in out and "A" in out
+
+
+def test_cmd_board_reorder(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+    called = {}
+
+    class DummyBM:
+        def __init__(self, *a, **kw):
+            pass
+
+        def reorder_items(self, weights=None):
+            called["done"] = True
+
+    monkeypatch.setattr("src.github.board_manager.BoardManager", DummyBM)
+
+    args = SimpleNamespace(board_cmd="reorder")
+    assert cmd_board_reorder(manager, args) == 0
+    assert called.get("done")
+
+
 def test_cmd_doctor_run(monkeypatch, tmp_path: Path):
     manager = DummyManager(tmp_path)
     manager.issue_manager = object()
@@ -409,3 +447,11 @@ def test_cmd_interactive(monkeypatch, tmp_path: Path, capsys):
     assert cmd_interactive(manager, parser) == 0
     out = capsys.readouterr().out
     assert "Interactive Shell" in out
+
+
+def test_cmd_configure(monkeypatch, tmp_path: Path):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    args = SimpleNamespace()
+    assert main.cmd_configure(args) == 0
+    cfg_file = tmp_path / ".autonomy" / "config.yml"
+    assert cfg_file.exists()
