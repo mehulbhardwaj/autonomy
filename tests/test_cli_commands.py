@@ -5,6 +5,7 @@ from src.cli.main import (
     cmd_audit,
     cmd_board_init,
     cmd_doctor,
+    cmd_doctor_nightly,
     cmd_init,
     cmd_list,
     cmd_next,
@@ -17,6 +18,7 @@ from src.cli.main import (
     cmd_update,
 )
 from src.core.config import WorkflowConfig
+from src.core.secret_vault import SecretVault
 
 
 class DummyResponse:
@@ -296,6 +298,46 @@ def test_cmd_doctor_run(monkeypatch, tmp_path: Path):
         oversized=False,
     )
     assert cmd_doctor(manager, args) == 0
+
+
+def test_cmd_doctor_nightly(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+
+    class DummyScheduler:
+        def __init__(self, bot):
+            self.called = False
+            self.slack_client = bot
+
+        def schedule_daily(self, name, time, func, channel):
+            func(channel)
+            self.called = True
+
+        def run_scheduler(self, block=False):
+            pass
+
+    class DummyBot:
+        pass
+
+    class DummyDoctor:
+        def __init__(self, mgr, slack=None):
+            pass
+
+        def run_nightly_diagnosis(self, channel="#c"):
+            return {}
+
+    monkeypatch.setattr("src.tasks.backlog_doctor.BacklogDoctor", DummyDoctor)
+    monkeypatch.setattr("src.slack.notifications.NotificationScheduler", DummyScheduler)
+    monkeypatch.setattr("src.slack.bot.SlackBot", DummyBot)
+
+    args = SimpleNamespace(
+        doctor_cmd="nightly",
+        repos=["owner/repo"],
+        channel="#c",
+        time="02:00",
+        slack_token="t",
+        forever=False,
+    )
+    assert cmd_doctor_nightly(manager, SecretVault(), args) == 0
 
 
 def test_cmd_audit_and_undo(tmp_path: Path):
