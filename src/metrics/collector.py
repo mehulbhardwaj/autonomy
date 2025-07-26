@@ -35,6 +35,7 @@ class MetricsCollector:
             "loc_per_assignee": self.calculate_loc_per_assignee(),
             "sprint_completion_rate": self.calculate_sprint_completion(),
             "open_issues_count": self.github.get_open_issues_count(repository),
+            "orphan_issues_count": self.calculate_orphan_count(),
             "planning_commands_used": self.audit.count_command_usage("plan"),
             "human_overrides_count": self.audit.count_human_overrides(),
         }
@@ -65,6 +66,13 @@ class MetricsCollector:
         func = getattr(self.github, "calculate_sprint_completion", lambda: 0.0)
         return float(func())
 
+    def calculate_orphan_count(self) -> int:
+        from ..tasks.hierarchy_manager import HierarchyManager
+
+        hm = HierarchyManager(self.github)
+        nodes = hm.build_tree()
+        return len(hm.find_orphans(nodes))
+
     def calculate_approval_rate(self) -> float:
         approvals = self.audit.count_approvals(days=7)
         total = self.audit.count_ai_recommendations(days=7)
@@ -85,6 +93,7 @@ class MetricsCollector:
             f"• Human overrides: {metrics['human_overrides_count']} (learning opportunities)\n\n"
             f"**📈 Development Velocity**\n"
             f"• LOC per assignee: {metrics['loc_per_assignee']} avg\n"
-            f"• Open issues: {metrics['open_issues_count']}\n\n"
+            f"• Open issues: {metrics['open_issues_count']}\n"
+            f"• Orphan issues: {metrics['orphan_issues_count']}\n\n"
             "💡 Use `/autonomy status` for detailed metrics"
         )

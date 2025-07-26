@@ -42,6 +42,12 @@ def create_app(
 
     task_manager.ranking = RankingEngine()
     task_manager.project_id = f"{issue_manager.owner}/{issue_manager.repo}"
+    from ..core.config import WorkflowConfig
+
+    task_manager.config = WorkflowConfig()
+    task_manager.sync_cooldown = task_manager.config.hierarchy_sync_cooldown
+    task_manager._last_sync = 0.0
+    task_manager.audit_logger = audit_logger
     backlog_doctor = BacklogDoctor(issue_manager)
     audit_logger = audit_logger or AuditLogger(Path("audit.log"))
     undo_manager = UndoManager(issue_manager, audit_logger)

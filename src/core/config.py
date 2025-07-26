@@ -56,6 +56,10 @@ class WorkflowConfig:
     # Board configuration
     board_cache_path: str = "~/.autonomy/field_cache.json"
 
+    # Hierarchy management
+    hierarchy_orphan_threshold: int = 3
+    hierarchy_sync_cooldown: int = 60
+
     # ------------------------------------------------------------------
     @classmethod
     def from_yaml(cls, path: Path) -> "WorkflowConfig":
@@ -113,5 +117,11 @@ class WorkflowConfig:
             raise ValueError(
                 "autonomy_level must be one of: supervised, semi-autonomous, autonomous"
             )
+
+        if self.hierarchy_orphan_threshold <= 0:
+            raise ValueError("hierarchy_orphan_threshold must be positive")
+
+        if self.hierarchy_sync_cooldown <= 0:
+            raise ValueError("hierarchy_sync_cooldown must be positive")
 
         return True

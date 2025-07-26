@@ -1,3 +1,4 @@
+import json
 from datetime import date
 from pathlib import Path
 
@@ -17,6 +18,9 @@ class DummyGitHub:
 
     def calculate_sprint_completion(self) -> float:
         return 75.0
+
+    def list_issues(self, state="open"):
+        return [{"number": 1, "labels": ["task"], "body": ""}]
 
 
 class DummyAudit:
@@ -57,6 +61,8 @@ def test_metrics_collection_and_storage(tmp_path: Path) -> None:
     assert "Daily Team Metrics" in report
     files = list((tmp_path / "metrics").glob("*.json"))
     assert files
+    data = json.loads(files[0].read_text())
+    assert "orphan_issues_count" in data
 
 
 def test_storage_filters_personal_data(tmp_path: Path) -> None:

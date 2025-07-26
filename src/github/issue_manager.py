@@ -351,7 +351,8 @@ class IssueManager:
         title: Optional[str] = None,
         body: Optional[str] = None,
         labels: Optional[List[str]] = None,
-    ) -> bool:
+        return_response: bool = False,
+    ) -> bool | requests.Response:
         """Update basic fields on an issue."""
         payload: Dict[str, Any] = {}
         if title is not None:
@@ -375,7 +376,7 @@ class IssueManager:
                     "update_issue",
                     {k: payload[k] for k in payload.keys()},
                 )
-            return success
+            return response if return_response else success
         except Exception:
             return False
 

@@ -120,6 +120,9 @@ autonomy board rank
 
 # Reorder items
 autonomy board reorder
+
+# Sync hierarchy
+autonomy hierarchy-sync
 ```
 
 ---

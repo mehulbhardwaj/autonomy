@@ -249,6 +249,25 @@ Environment Variables:
 
     metrics_sub.add_parser("export", help="Export metrics in Prometheus format")
 
+    # Hierarchy sync command
+    hier_sync_parser = subparsers.add_parser(
+        "hierarchy-sync", help="Synchronize issue hierarchy"
+    )
+    hier_sync_parser.add_argument(
+        "--dry-run", action="store_true", help="Do not apply changes"
+    )
+    hier_sync_parser.add_argument(
+        "--force", action="store_true", help="Force sync even if no changes"
+    )
+    hier_sync_parser.add_argument(
+        "--verbose", action="store_true", help="Show progress information"
+    )
+    hier_sync_parser.add_argument(
+        "--orphan-threshold",
+        type=int,
+        help="Number of orphans before warnings",
+    )
+
     # Board command
     board_parser = subparsers.add_parser("board", help="Manage project board")
     board_sub = board_parser.add_subparsers(dest="board_cmd")
@@ -382,6 +401,8 @@ def _dispatch_command(
             return cmd_metrics_export(manager, args)
         print(f"Unknown metrics command: {args.metrics_cmd}")
         return 1
+    if args.command == "hierarchy-sync":
+        return cmd_hierarchy_sync(manager, args)
     if args.command == "board":
         if args.board_cmd == "init":
             return cmd_board_init(manager, args)
@@ -557,6 +578,7 @@ def cmd_setup(manager: WorkflowManager, args) -> int:
 @handle_errors
 def cmd_process(manager: WorkflowManager, args) -> int:
     """Process issue command"""
+    _ensure_imports()
     console = Console()
     console.print(f"Processing issue #{args.issue} through Generate-Verify loop...")
     from rich.progress import Progress
@@ -634,7 +656,13 @@ def cmd_next(manager: WorkflowManager, args) -> int:
     _ensure_imports()
     from ..tasks.task_manager import TaskManager
 
-    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    tm = TaskManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        audit_logger=getattr(manager, "audit_logger", None),
+        config=getattr(manager, "config", WorkflowConfig()),
+    )
     result = tm.get_next_task(
         assignee=args.assignee,
         team=args.team,
@@ -676,7 +704,13 @@ def cmd_update(manager: WorkflowManager, args) -> int:
     """Update an issue's status or completion."""
     from ..tasks.task_manager import TaskManager
 
-    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    tm = TaskManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        audit_logger=getattr(manager, "audit_logger", None),
+        config=getattr(manager, "config", WorkflowConfig()),
+    )
     success = tm.update_task(
         args.issue, status=args.status, done=args.done, notes=args.notes
     )
@@ -704,7 +738,13 @@ def cmd_list(manager: WorkflowManager, args) -> int:
             print(f"#{num}: {title}")
         return 0
 
-    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    tm = TaskManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        audit_logger=getattr(manager, "audit_logger", None),
+        config=getattr(manager, "config", WorkflowConfig()),
+    )
     assignee = args.assignee
     if args.mine:
         assignee = assignee or os.getenv("GITHUB_USER")
@@ -844,7 +884,13 @@ def cmd_rerank(manager: WorkflowManager, args) -> int:
     """Re-evaluate ranking for open issues."""
     from ..tasks.task_manager import TaskManager
 
-    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    tm = TaskManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        audit_logger=getattr(manager, "audit_logger", None),
+        config=getattr(manager, "config", WorkflowConfig()),
+    )
     tasks = tm.list_tasks()
     if not tasks:
         print("No tasks found")
@@ -1057,6 +1103,58 @@ def cmd_board_reorder(manager: WorkflowManager, args) -> int:
     )
     bm.reorder_items()
     print("✓ Board reordered")
+    return 0
+
+
+@handle_errors
+def cmd_hierarchy_sync(manager: WorkflowManager, args) -> int:
+    """Synchronize issue hierarchy."""
+    _ensure_imports()
+    from ..github.issue_manager import IssueManager
+    from ..tasks.hierarchy_manager import HierarchyManager
+
+    issue_manager: IssueManager = manager.issue_manager
+
+    if getattr(args, "dry_run", False):
+
+        class DryRunIM(IssueManager):
+            def __init__(self, base: IssueManager) -> None:
+                self.__dict__.update(base.__dict__)
+                self._counter = 1000000
+
+            def create_issue(self, issue, milestone_number=None):  # type: ignore[override]
+                self._counter += 1
+                print(f"[dry-run] create issue '{issue.title}'")
+                return self._counter
+
+            def update_issue(self, issue_number: int, **kw):  # type: ignore[override]
+                print(f"[dry-run] update issue #{issue_number}")
+
+                class R:
+                    status_code = 200
+                    headers: dict = {}
+
+                return R() if kw.get("return_response") else True
+
+        issue_manager = DryRunIM(manager.issue_manager)
+
+    threshold = args.orphan_threshold or manager.config.hierarchy_orphan_threshold
+    hm = HierarchyManager(issue_manager, orphan_threshold=threshold)
+    if getattr(args, "verbose", False):
+        from rich.progress import Progress
+
+        with Progress(transient=True) as progress:
+            t = progress.add_task("Syncing", total=None)
+            result = hm.maintain_hierarchy()
+            progress.update(t, completed=1)
+    else:
+        result = hm.maintain_hierarchy()
+
+    print(f"Created: {result['created']}")
+    if result["orphans"]:
+        print(
+            f"\N{WARNING SIGN} Orphans detected ({len(result['orphans'])}): {', '.join(map(str, result['orphans']))}"
+        )
     return 0
 
 
