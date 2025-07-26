@@ -24,7 +24,7 @@ Developers still burn ≈ 6 h/week on coordination even with LLM coding tools. N
 - **Flow-first** – surfaces tasks via CLI/IDE and Slack, extend to a web board later.  
 - **Trustable** – every bot edit is auditable, reversible, and explainable.  
 - **Adaptive** – learns from reversals and fine-tunes behaviour per team.  
-- **Open-core** – OSS foundations, SaaS convenience + enterprise security.
+- **Open-source** – OSS foundations with community-driven development.
 
 
 ---
@@ -46,7 +46,7 @@ Developers still burn ≈ 6 h/week on coordination even with LLM coding tools. N
 | G-2 | **Backlog Health** | Automatically keep the backlog ≤ 5 % stale/orphaned issues. | Backlog-hygiene score |
 | G-3 | **Trust & Transparency** | ≥ 85 % approval of bot edits with reversible audit trail. | Thumbs-up ratio |
 | G-4 | **Adoption** | ≥ 70 % weekly active slash-command users in pilot squads. | WAU/MAU |
-| G-5 | **Commercial Viability** | 2 paid conversions within 60 days of pilot launch. | Conversion count |
+
 
 ---
 
@@ -58,7 +58,7 @@ Developers still burn ≈ 6 h/week on coordination even with LLM coding tools. N
 | **H2** | Teams trust agent edits when every change is logged & reversible. | Undo usage < 15 % + ≥ 85 % approvals | Ship deeper review gates |
 | **H3** | IDE & Chat are preferred surfaces; separate web UI optional. | ≥ 70 % interactions via CLI/Slack | Need dedicated web UI sooner |
 | **H4** | Nightly "Backlog Doctor" cuts grooming meeting time ≥ 50 %. | Self-reported time logs | Reduce grooming features |
-| **H5** | GitHub-native hierarchy beats building a fresh SaaS tracker. | Tasklists stability + user feedback | Build proprietary board |
+| **H5** | GitHub-native hierarchy beats building a fresh project tracker. | Tasklists stability + user feedback | Build proprietary board |
 | **H6** | A multi-queue ranking engine improves planned-vs-done ratio by ≥ 20 %.                                                      | Δ sprint completion % across two sprints                            | Ranking adds no measurable value           |
 | **H7** | Persistent overrides cut undo calls by ≥ 50 % vs. stateless overrides.                                                      | Undo events / 100 agent edits                                       | Override UX misunderstood                  |
 | **H8** | A simple Pin / Unpin toggle covers ≥ 90 % of "freeze this" use-cases and reduces manual drags by ≥ 30 %.                     | Drag events per sprint; pin usage rate                              | Need richer lock mechanism                 |
@@ -75,9 +75,9 @@ Developers still burn ≈ 6 h/week on coordination even with LLM coding tools. N
 | ------------------------------------------------- | ------------------------------------- | -------------------------------------------------------------- |
 | *Core Planning API, CLI, Slack Bot*               | GPLv3                                   | Fosters contributions, mirrors Git open-source ethos.          |
 | *Agent Orchestration, LLM Prompts, Pattern Miner* | Server Side Public License (SSPL) | Open code, restricts SaaS copycats.                            |
-| *Cloud SaaS*                                      | Proprietary                           | Adds value: autoscaling LLMs, analytics, audit streaming, SSO. |
+| *Community Features*                              | Open Source                           | Adds value: community contributions, extensions, integrations. |
 
-*Follows Git (GPL2) + GitHub (proprietary SaaS) playbook.*
+*Follows open source community-driven development model.*
 
 ---
 
@@ -89,7 +89,7 @@ Developers still burn ≈ 6 h/week on coordination even with LLM coding tools. N
 | Grooming meeting time                     | -50 % within 2 sprints  | Self-reported survey |
 | Bot-edit approval (thumbs-up)             | ≥ 85 %                  | Slack modal          |
 | Weekly active slash-command users         | ≥ 70 % of pilot         | Analytics service    |
-| Two paid conversions                      | within 60 days of pilot | Commercial ops       |
+| Two active contributors                   | within 60 days of pilot | Community metrics    |
 
 ---
 
@@ -149,50 +149,46 @@ Python + FastAPI monolith for speed.
 TypeScript CLI & Slack (share GraphQL queries).
 ---
 
-### Phase 2 – Learning & Adaptation (Month 2)
-1. Reversal feedback modal & pattern miner to learn from Reversals
-- Slack undo modal captures `reason`, `severity`, `flow_area`.  
-- Pattern miner clusters reasons nightly; if same motif ≥ 3× → propose rule.
-Definition of Done: System takes in user-feedback whenever user overrides system's automated work. Is able to learn patterns for that repo, and stick with it in the future.
-2. Determine task priority algorithm based on global context and feedback from humans and task asignees (AI agents or Humans).
+### Phase 2 – Core Enhancement (Month 2)
+1. Enhanced ranking engine with basic learning
+- Improve priority algorithm based on team feedback
 - Multi-queue Ranking Engine (team & actor views)
 - Overrides ledger + Pin/Unpin Boolean field (auto-created by bootstrap)      
-3. Gather inputs from assignees (summarised logs during task execution, final completion comments). 
-3. Team-level rule suggestion engine
-4. Assign tasks to relevant Agents, AI tools and Human Reviewers. Enforce the Generate-Verify loop.
-5. Pilot analytics dashboard
-- Ship **Ranking Engine**, **Overrides Ledger**, **Pin/Unpin**, **Reversal-Rule Engine**.
+2. Basic analytics and metrics
+- Track pin usage, override frequency, planned/done delta
+- Simple dashboard for team insights
+3. Enhanced undo system
+- Basic undo feedback collection
+- Improved audit trail
 
-
-*Goal: raise bot-edit approval ≥ 90 % via learned rules.*
-**Tech Stack** Extract Go gateway once webhook volume > 1 req/s per repo.
+*Goal: improve team productivity and transparency.*
+**Tech Stack** Keep Python for simplicity and maintainability.
 ---
 
-### Phase 3 – Production Hardening (Months 3-4)
-- SSO/SAML, SCIM, IP allow-lists  
-- GitHub Audit Stream → customer SIEM  
-- Secret & code-scanning gates on bot PRs  
-- 99.9 % uptime SLO (HA Redis + Postgres)
-- Production: GitHub Audit Log Streaming → customer SIEM, SSO/SAML, SCIM, ip-allow-lists.
+### Phase 3 – Core Stability (Months 3-4)
+- Enhanced security and reliability
+- Improved error handling and recovery
+- Better performance optimization
+- Community monitoring and feedback collection
 
 **Tech Stack** 
-Add Go job scheduler for Backlog Doctor and audit streaming.
-Keep Python strictly for AI/ML
+Keep Python for simplicity and maintainability.
 ---
 
-### Phase 4 – Context & Insights (Month 5)
-- RAG over code, docs, PR history  
-- Velocity forecasting & risk heat-maps  
-- Multi-repo epic support (Projects v2 stitching)
+### Phase 4 – Core Insights (Month 5)
+- Basic code-aware planning
+- Simple velocity tracking
+- Enhanced team insights
+- Improved documentation and examples
 
 **Tech Stack** 
-Next.js web lens shares TS domain models with CLI.
+Keep Python for simplicity and maintainability.
 ---
 
-### Phase 5 – Ecosystem & SDK (Month 6+)
-- Plugin SDK for custom scorers, alt-LLMs  
-- Marketing/Ops intake templates + ambiguity resolver  
-- Optional React "Planner Lens" web UI
+### Phase 5 – Core Ecosystem (Month 6+)
+- Simple extension points for customizations
+- Enhanced documentation and examples
+- Community-driven improvements
 
 ---
 
@@ -221,44 +217,49 @@ Next.js web lens shares TS domain models with CLI.
 | F-1-8 | Instrumentation | Track latency, approvals, undo rate, WAU |
 
 
-### F-2 (Learning)
+### F-2 (Core Enhancement)
 | ID | Function | Detail |
 |----|----------|--------|
 | F-2-1  | Overrides Listener          | Webhook captures drag/field edits; writes to `overrides` table |
 | F-2-2  | Ranking Engine              | Weighted score; skips `pin=true`; reorders via `updateProjectV2ItemPosition` |
 | F-2-3  | Pin/Unpin Toggle            | `Pinned` single-select field; `/autonomy pin|unpin <id>` |
-| F-2-4  | Override Expiry Logic       | Position overrides expire at sprint end; others persistent until cleared |
-| F-2-5 | Reversal-Rule Engine v1 | Nightly clustering of recurring overrides; auto-creates team rule (weight tweak or label rule) |
-| F-2-6  | Structured Feedback Modal   | Slack modal after drag: capture reason, temp/permanent |
-| F-2-7  | Config Surface              | YAML/Slack settings for scoring weights & rule toggles |
-| F-2-8  | Metrics v2                  | Track pin usage, override frequency, planned/done delta |
-| F-2-9 | Undo Feedback | Slack modal captures reason, severity, flow_area |
-| F-2-10 | Pattern Miner | Cluster feedback, auto-suggest team rules |
 
 
-### F-3 (Secure GA)
+### F-3 (Core Security)
 | ID | Function | Detail |
 |----|----------|--------|
-| F-3-1 | Identity Mgmt | SSO, SAML, SCIM provisioning |
-| F-3-2 | Audit Streaming | Forward to customer SIEM |
-| F-3-3 | Policy Gates | Secret & code-scan checks on bot PRs |
+| F-3-1 | Identity Mgmt | GitHub OAuth, community authentication |
 
 *(F-4 / F-5 functions align to roadmap items.)*
 
 ---
 
-## 10. Non-Functional Requirements (Phase 3 onwards)
+## 10. Non-Functional Requirements (Core)
 | Aspect | Requirement |
 |--------|-------------|
 | **Performance** | Internal API < 300 ms; CLI round-trip p95 ≤ 3 s |
 | **Scalability** | 1 k issues/day, 50 repos/org at MVP |
 | **Reliability** | 99.5 % MVP → 99.9 % GA |
-| **Compliance** | SOC 2 Type I by GA (GitHub audit for MVP) |
-| **Observability** | Centralised logs, metrics, traces |
+| **Security** | GitHub audit for MVP |
+| **Observability** | Basic logs, metrics, traces |
 
 ---
 
-## 11. System Architecture (High-level)
+## 11. Core vs Pro Features
+
+This PRD covers the open source core features. For advanced features including:
+
+- **Advanced AI Learning**: Reversal-Rule Engine, Pattern Miner, Multi-Agent Orchestration
+- **Enterprise Features**: SSO/SAML, SCIM, IP allow-lists, Audit streaming
+- **SaaS Features**: Hosted deployment, Premium support, Multi-repo support
+- **Advanced Analytics**: RAG integration, Velocity forecasting, Risk heat-maps
+- **Web UI**: React "Planner Lens" interface
+
+Advanced features are planned for future releases.
+
+---
+
+## 12. System Architecture (High-level)
 
 ```mermaid
 flowchart LR

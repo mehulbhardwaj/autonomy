@@ -87,7 +87,7 @@ class PlanningWorkflow(BaseWorkflow):
         state["tasks"] = tasks
         self.memory.add(
             {
-                f"tasks:{state.get('title','')}": text,
+                f"tasks:{state.get('title', '')}": text,
                 "repository": state.get("repository", "default"),
             }
         )

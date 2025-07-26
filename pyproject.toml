@@ -12,7 +12,7 @@ license = "GPL-3.0-or-later"
 authors = [
     {name = "Mehul Bhardwaj", email = "mehul@example.com"}
 ]
-keywords = ["ai", "automation", "github", "workflow", "agents", "mcp", "software-development"]
+keywords = ["ai", "automation", "github", "workflow", "agents", "software-development"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -58,16 +58,12 @@ dev = [
     "argcomplete>=3.1.1",
     "pyyaml>=6.0",
 ]
-mcp = [
-    "mcp>=0.1.0",
-]
 llm = [
     "openai>=1.0.0",
     "anthropic>=0.3.0",
 ]
 
 [project.scripts]
-autonomy-mcp = "src.cli.main:main"
 autonomy = "src.cli.main:main"
 
 [project.urls]
