@@ -50,7 +50,11 @@ def create_app(
     task_manager.audit_logger = audit_logger
     backlog_doctor = BacklogDoctor(issue_manager)
     audit_logger = audit_logger or AuditLogger(Path("audit.log"))
-    undo_manager = UndoManager(issue_manager, audit_logger)
+    undo_manager = UndoManager(
+        issue_manager,
+        audit_logger,
+        commit_window=getattr(task_manager.config, "commit_window", 5),
+    )
     vault = vault or SecretVault()
 
     app = FastAPI(title="Autonomy API", version="1.0")

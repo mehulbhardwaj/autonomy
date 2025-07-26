@@ -27,12 +27,21 @@ class AuditLogger:
             self._ensure_repo()
 
     def log(self, operation: str, details: Dict[str, Any]) -> str:
-        """Log an operation and return its unique hash."""
+        """Log an operation and return its unique hash.
+
+        A secondary ``diff_hash`` based only on the operation details is also
+        recorded so that external systems can verify the change without caring
+        about the timestamp.
+        """
         payload = {
             "operation": operation,
             "details": details,
             "timestamp": datetime.utcnow().isoformat(),
         }
+
+        diff_hash = sha1(json.dumps(details, sort_keys=True).encode()).hexdigest()[:8]
+        payload["diff_hash"] = diff_hash
+
         digest = sha1(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:8]
         payload["hash"] = digest
         with self.log_path.open("a", encoding="utf-8") as f:

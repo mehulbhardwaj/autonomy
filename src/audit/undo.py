@@ -6,18 +6,24 @@ from .logger import AuditLogger
 class UndoManager:
     """Undo operations previously logged by :class:`AuditLogger`."""
 
-    def __init__(self, issue_manager: Any, logger: AuditLogger) -> None:
+    def __init__(
+        self, issue_manager: Any, logger: AuditLogger, *, commit_window: int = 5
+    ) -> None:
         self.issue_manager = issue_manager
         self.logger = logger
+        self.commit_window = commit_window
 
     def _load_logs(self) -> list[Dict[str, Any]]:
-        return list(self.logger.iter_logs())
+        logs = list(self.logger.iter_logs())
+        if self.commit_window > 0:
+            logs = logs[-self.commit_window :]  # noqa: E203
+        return logs
 
     def undo(self, hash_value: str) -> bool:
         """Undo a specific operation by its hash."""
         logs = self._load_logs()
         for entry in reversed(logs):
-            if entry.get("hash") == hash_value:
+            if entry.get("hash") == hash_value or entry.get("diff_hash") == hash_value:
                 return self._apply(entry)
         return False
 
