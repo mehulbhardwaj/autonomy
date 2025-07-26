@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub Copilot integration
 - Playwright integration for UI testing
 - Advanced agent customization
+- Complete undo system with Slack `/autonomy undo` command
 
 ## [0.1.1] - 2025-07-16
 ### Added

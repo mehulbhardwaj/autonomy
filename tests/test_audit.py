@@ -32,3 +32,33 @@ def test_logger_and_undo(tmp_path: Path) -> None:
         text=True,
     ).strip()
     assert h in log
+
+    # verify diff hash is stored
+    entry = next(logger.iter_logs())
+    expected_diff = (
+        __import__("hashlib")
+        .sha1(
+            __import__("json")
+            .dumps(
+                {"issue": 2, "add_labels": ["a"], "remove_labels": None}, sort_keys=True
+            )
+            .encode()
+        )
+        .hexdigest()[:8]
+    )
+    assert entry.get("diff_hash") == expected_diff
+
+
+def test_commit_window_limit(tmp_path: Path) -> None:
+    logger = AuditLogger(tmp_path / "audit.log")
+    dummy = DummyIM()
+    hashes = [
+        logger.log(
+            "update_labels", {"issue": i, "add_labels": ["a"], "remove_labels": None}
+        )
+        for i in range(3)
+    ]
+    undo = UndoManager(dummy, logger, commit_window=2)
+    # first hash should be out of window
+    assert not undo.undo(hashes[0])
+    assert undo.undo(hashes[2])

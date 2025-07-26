@@ -21,6 +21,8 @@ class SlashCommandHandler:
             return self.handle_update_command(args)
         if command == "/autonomy status":
             return self.handle_status_command(args)
+        if command == "/autonomy undo":
+            return self.handle_undo_command(args)
         return self.handle_help_command()
 
     def handle_next_command(self, args: Dict) -> Dict:
@@ -94,10 +96,37 @@ class SlashCommandHandler:
             "response_type": "ephemeral",
         }
 
+    def handle_undo_command(self, args: Dict) -> Dict:
+        hash_value = args.get("text", "").strip()
+        if not hash_value:
+            return {
+                "text": "Usage: `/autonomy undo <hash>`",
+                "response_type": "ephemeral",
+            }
+
+        issue_mgr = getattr(self.task_manager, "issue_manager", None)
+        logger = getattr(self.task_manager, "audit_logger", None)
+        if not issue_mgr or not logger:
+            return {"text": "Undo not supported", "response_type": "ephemeral"}
+
+        from src.audit.undo import UndoManager
+
+        undo = UndoManager(issue_mgr, logger)
+        if undo.undo(hash_value):
+            return {
+                "text": f"\u2705 Undo {hash_value} completed",
+                "response_type": "in_channel",
+            }
+        return {
+            "text": f"\u274c Undo {hash_value} failed",
+            "response_type": "ephemeral",
+        }
+
     def handle_help_command(self) -> Dict:
         return {
             "text": (
-                "Available commands: /autonomy next, /autonomy update, /autonomy status"
+                "Available commands: /autonomy next, /autonomy update, "
+                "/autonomy status, /autonomy undo"
             )
         }
 

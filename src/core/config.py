@@ -56,6 +56,9 @@ class WorkflowConfig:
     # Board configuration
     board_cache_path: str = "~/.autonomy/field_cache.json"
 
+    # Undo configuration
+    commit_window: int = 5
+
     # Hierarchy management
     hierarchy_orphan_threshold: int = 3
     hierarchy_sync_cooldown: int = 60
@@ -123,5 +126,8 @@ class WorkflowConfig:
 
         if self.hierarchy_sync_cooldown <= 0:
             raise ValueError("hierarchy_sync_cooldown must be positive")
+
+        if self.commit_window <= 0:
+            raise ValueError("commit_window must be positive")
 
         return True

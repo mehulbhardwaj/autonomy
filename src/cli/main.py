@@ -1172,7 +1172,11 @@ def cmd_undo(manager: WorkflowManager, args) -> int:
     """Undo a previously logged operation."""
     from ..audit.undo import UndoManager
 
-    um = UndoManager(manager.issue_manager, manager.audit_logger)
+    um = UndoManager(
+        manager.issue_manager,
+        manager.audit_logger,
+        commit_window=getattr(manager.config, "commit_window", 5),
+    )
     if args.last:
         result = um.undo_last()
         if not result:
