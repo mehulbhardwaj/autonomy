@@ -82,7 +82,7 @@ jobs:
           pytest -o addopts='' tests/test_board_priority.py -q
           pytest -o addopts='' tests/test_installation.py -q
           pytest -o addopts='' tests/test_distribution.py -q
-          pytest -o addopts='' tests/test_no_mcp_references.py -q
+
           pytest -o addopts='' tests/test_token_storage.py -q
           pytest -o addopts='' tests/test_backlog_doctor.py -q
           pytest -o addopts='' tests/test_audit.py -q

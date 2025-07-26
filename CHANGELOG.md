@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples and usage guides
 - Support for supervised, semi-autonomous, and autonomous modes
 - Branch protection and human approval gates
-- Living documentation system (PRD.md, TECH.md, TEST.md)
+- Living documentation system (REQUIREMENTS.md, ARCHITECTURE.md, TEST.md)
 
 ### Features
 - **Generate-Verify Loop**: Structured AI workflow with human oversight
