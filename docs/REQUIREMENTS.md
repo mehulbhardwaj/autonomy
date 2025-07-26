@@ -99,83 +99,39 @@ Developers still burn ≈ 6 h/week on coordination even with LLM coding tools. N
 
 | Deliverable | **Why** | **How-to** | **Done-when** |
 |-------------|---------|------------|---------------|
-| **Instant CLI bootstrap** (`pipx install autonomy`) | Cut first-run friction to < 60 s | Use GitHub **Device-Flow OAuth** (POST to `/login/device/code`) | User runs `autonomy init` and lands on authenticated shell in one command |
-| Repo & CI | Quality gates | GitHub Actions with pytest, black, mypy | All PRs auto-test with >80% coverage |
-| Secret vault | Token safety | OS keychain (macOS Keychain, Windows Credential Manager) + file fallback | No secrets in git, encrypted storage |
-| **Board bootstrap** | Consistent metadata | GraphQL `createProjectV2Field` for Priority, Pinned, Track, Sprint | Fields exist & IDs cached in `~/.autonomy/field_cache.json` |
-| **Slack Bot setup** | Team communication | Slack App OAuth + webhook endpoint | `/autonomy help` works in Slack channels | 
+| **CLI Bootstrap** | Developers need instant access | `pipx install autonomy` | CLI runs in <60s |
+| **GitHub OAuth** | Trusted authentication | Device-flow OAuth | User can auth in <2min |
+| **Board Bootstrap** | Native GitHub Projects v2 | `autonomy board init` | Fields created + cached |
+| **Slack Bot** | Team communication | Slack App + OAuth | Bot responds to commands |
 
----
+### Phase 1 – MVP Beta (Weeks 3-6)
 
-### Phase 1 – MVP Beta (Weeks 3-6) ⚑ *Pilot*
-**Features**
-1. `/autonomy next` & `/autonomy update` (CLI + Slack). Basic priority ranking system using GitHub Projects v2 fields and position index.
-- `/autonomy next [--me]` – returns highest-priority unblocked issue assigned to caller.  
-- `/autonomy update <issue> --done --notes "…"` – closes issue, rolls over incomplete subtasks. 
-- Priority ranking based on: Priority field (P0-P3), Sprint proximity, issue age, blocked status.
-- Manual override support: "Pinned" field allows users to freeze issue position from automatic reordering.
-- Slack slash commands: `/autonomy next`, `/autonomy update <issue>`, `/autonomy status`
-Definition of Done: CLI able to edit issues, return next issue with transparent priority reasoning. Slack commands work in channels.
+| Deliverable | **Why** | **How-to** | **Done-when** |
+|-------------|---------|------------|---------------|
+| **Task Retrieval** | Clear next task | `autonomy next` | Returns highest-priority issue |
+| **Status Updates** | Progress tracking | `autonomy update` | Updates issue + rolls subtasks |
+| **Hierarchy Sync** | Organized backlog | Tasklists API | Epic → Task → Sub-task |
+| **Backlog Doctor** | Backlog hygiene | Nightly cron | Flags stale/dup/oversized |
+| **Undo System** | Trust & safety | Shadow-branch PR | Reversible changes |
+| **Slack Commands** | Team workflow | `/autonomy next` | Commands work in Slack |
+| **Notifications** | Team visibility | Nightly digest | Reports posted to channels |
+| **Instrumentation** | Usage insights | Metrics collection | Basic analytics working |
 
-2. Issue hierarchy auto-maintenance via Tasklists
-- Maintain **Epic → Feature → Task → Sub-task** using GitHub Tasklists.  
-- Auto-create parent epics if missing; warn if orphan tasks > 3.
-Definition of Done: Issue metadata is captured cleanly and maintained over time. System is aware of existing tickets and works with them.
+### Phase 2 – Core Enhancement (Weeks 7-10)
 
-3. Nightly Backlog Doctor digest  
-- Flag stale (> 14 days idle), duplicate (≥ 0.9 title/body sim.), or over-large (> 10 checklist items) issues.  
-- Post digest to `#autonomy-daily` Slack thread with actionable recommendations.
-Definition of Done: System proactively manages issue hygiene and removes drift. Slack digest posted nightly.
+| Deliverable | **Why** | **How-to** | **Done-when** |
+|-------------|---------|------------|---------------|
+| **Overrides Listener** | Manual override tracking | GitHub webhooks | Captures drag/field edits |
+| **Ranking Engine** | Intelligent prioritization | Weighted scoring | Reorders based on factors |
+| **Pin/Unpin Toggle** | Manual control | `Pinned` field | Users can pin/unpin |
 
-4. Shadow-branch PR + one-click Undo  
-- All multi-issue edits land as PR on branch `autonomy/backlog-patch-<ts>`.  
-- Comment embeds JSON diff hash.  
-- **Undo** via `/autonomy undo <hash>` (CLI/Slack) within *N* commits window (configurable, default 5). Native integration with Github's version control system as much as possible. 
-- Undo reapplies inverse JSON patch to all touched artefacts.
-Definition of Done: Supports an ability to version control automated issue updates, using native Github capabilities.
+### Phase 3 – Core Security (Weeks 11-12)
 
-5. Basic metrics (time-to-task, approvals, WAU, LOCs per Assignee)
-Definition of Done: System is able to generate automated reports on a daily basis to Slack communication channel with clear metrics dashboards.
+| Deliverable | **Why** | **How-to** | **Done-when** |
+|-------------|---------|------------|---------------|
+| **Identity Management** | Security & trust | GitHub OAuth | Community authentication |
 
-6. Security & Permissions
-- MVP: PAT limited to `repo`, `issues:write`, `audit_log:read`.  
-Definition of Done: System is able to manage user access reliably. Leverage Github's native systems for MVP.
-
-**Hypotheses tested:** H1, H2, H3, H4, H5  
-**Pilot cohort:** 10 squads, 2 sprints.
-
-**Tech Stack**
-Python + FastAPI monolith for speed.
-TypeScript CLI & Slack (share GraphQL queries).
----
-
-### Phase 2 – Core Enhancement (Month 2)
-1. Enhanced ranking engine with basic learning
-- Improve priority algorithm based on team feedback
-- Multi-queue Ranking Engine (team & actor views)
-- Overrides ledger + Pin/Unpin Boolean field (auto-created by bootstrap)      
-2. Basic analytics and metrics
-- Track pin usage, override frequency, planned/done delta
-- Simple dashboard for team insights
-3. Enhanced undo system
-- Basic undo feedback collection
-- Improved audit trail
-
-*Goal: improve team productivity and transparency.*
-**Tech Stack** Keep Python for simplicity and maintainability.
----
-
-### Phase 3 – Core Stability (Months 3-4)
-- Enhanced security and reliability
-- Improved error handling and recovery
-- Better performance optimization
-- Community monitoring and feedback collection
-
-**Tech Stack** 
-Keep Python for simplicity and maintainability.
----
-
-### Phase 4 – Core Insights (Month 5)
+### Phase 4 – Core Polish (Month 4)
 - Basic code-aware planning
 - Simple velocity tracking
 - Enhanced team insights
@@ -276,3 +232,38 @@ flowchart LR
         C --> H[(Audit Log Writer)]
     end
 ```
+
+> For detailed system design and technical rationale, see [ARCHITECTURE.md](ARCHITECTURE.md).
+
+---
+
+## 13. Development Workflow & Process
+
+### Generate-Verify Loop Process
+
+This repository follows the Generate-Verify loop workflow for AI-assisted development:
+
+1. **PM-agent**: Requirements → Design → Test Plan
+2. **SDE-agent**: Implementation → Initial Testing  
+3. **QA-agent**: Comprehensive Testing → Hardening
+4. **Human**: Code Review → Approval
+
+### Issue Workflow States
+
+Issues progress through these states in the development process:
+- `needs-requirements` → `needs-development` → `needs-testing` → `needs-review` → `approved`
+
+### Quality Standards
+
+- **Max file size**: 300 lines
+- **Max function size**: 40 lines  
+- **Max PR size**: 500 lines
+- **Test coverage**: 60-80%
+- **Documentation**: Required for all features
+
+### Branch Protection
+
+- Main branch requires approved flag
+- All tests must pass
+- No direct pushes allowed
+- Human approval required for merge

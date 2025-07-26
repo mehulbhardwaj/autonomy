@@ -83,6 +83,8 @@ export SLACK_SIGNING_SECRET="your_slack_signing_secret"
 export AUTONOMY_LOG_LEVEL="INFO"
 ```
 
+> For a full list of configuration options, see [CONFIGURATION.md](CONFIGURATION.md).
+
 ### GitHub Token Setup
 
 1. Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)

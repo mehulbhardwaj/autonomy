@@ -4,18 +4,25 @@ from pathlib import Path
 
 DOCS = [
     "docs/USER_GUIDE.md",
-    "docs/INSTALLATION.md",
+    "docs/INSTALLATION.md", 
     "docs/CONFIGURATION.md",
-    "docs/SELF_HOSTING.md",
-    "docs/ENTERPRISE.md",
-    "docs/API.md",
     "docs/ARCHITECTURE.md",
-    "docs/OPERATIONS.md",
+    "docs/REQUIREMENTS.md",
+    "docs/TEST.md",
+]
+
+MAIN_DOCS = [
+    "README.md",
 ]
 
 
 def test_docs_exist():
     for doc in DOCS:
+        assert Path(doc).exists(), f"missing {doc}"
+
+
+def test_main_docs_exist():
+    for doc in MAIN_DOCS:
         assert Path(doc).exists(), f"missing {doc}"
 
 

@@ -57,21 +57,23 @@ pytest
 
 ---
 
-## 📚 Documentation
+## �� Documentation
 
-### For Users
-- **[Installation Guide](docs/INSTALLATION.md)** - How to install and set up Autonomy
-- **[User Guide](docs/USER_GUIDE.md)** - How to use Autonomy CLI and features
-- **[Configuration](docs/CONFIGURATION.md)** - Configuration options and settings
+### Quick Reference
+- **[Installation Guide](docs/INSTALLATION.md)** - Get started with Autonomy
+- **[User Guide](docs/USER_GUIDE.md)** - Learn how to use Autonomy CLI and features
+- **[Configuration](docs/CONFIGURATION.md)** - All configuration options and settings
 
 ### For Developers
-- **[Development Setup](docs/DEVELOPMENT_SETUP.md)** - Setting up the development environment
-- **[Workflow](docs/WORKFLOW.md)** - Development workflow and contribution guidelines
+- **[Technical Architecture](docs/ARCHITECTURE.md)** - System design and implementation details
+- **[Product Requirements](docs/REQUIREMENTS.md)** - Product vision, roadmap, and development workflow
+- **[Testing Strategy](docs/TEST.md)** - Testing approach and coverage strategy
 
-### Internal Documentation
-- **[Product Requirements (PRD)](docs/REQUIREMENTS.md)** - Product vision and requirements (internal)
-- **[Technical Architecture (TECH)](docs/ARCHITECTURE.md)** - System design and implementation details
-- **[Testing Strategy (TEST)](docs/TEST.md)** - Testing approach and coverage strategy
+### Documentation Structure
+This project maintains focused documentation with clear separation of concerns:
+- **User-facing**: Installation, usage, and configuration guides
+- **Developer-facing**: Architecture, requirements, implementation, and testing
+- **Cross-references**: Each document references related documentation where appropriate
 
 ---
 
@@ -126,8 +128,8 @@ autonomy board reorder
 
 We welcome contributions from developers interested in AI-human collaboration and intelligent automation!
 
-1. **Read the docs**: Start with [ARCHITECTURE.md](docs/ARCHITECTURE.md)
-2. **Setup environment**: Follow [DEVELOPMENT_SETUP.md](docs/DEVELOPMENT_SETUP.md)
+1. **Read the docs**: Start with [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [REQUIREMENTS.md](docs/REQUIREMENTS.md)
+2. **Setup environment**: Follow [INSTALLATION.md](docs/INSTALLATION.md) for development setup
 3. **Pick an issue**: Check [good first issues](https://github.com/mehulbhardwaj/autonomy/labels/good%20first%20issue)
 4. **Join discussions**: Participate in issue discussions and planning
 
