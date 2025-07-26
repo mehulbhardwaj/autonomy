@@ -4,7 +4,7 @@ from pathlib import Path
 
 DOCS = [
     "docs/USER_GUIDE.md",
-    "docs/INSTALLATION.md", 
+    "docs/INSTALLATION.md",
     "docs/CONFIGURATION.md",
     "docs/ARCHITECTURE.md",
     "docs/REQUIREMENTS.md",
