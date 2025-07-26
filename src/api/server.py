@@ -30,6 +30,8 @@ def create_app(
     issue_manager: IssueManager,
     audit_logger: Optional[AuditLogger] = None,
     vault: Optional["SecretVault"] = None,
+    webhook_secret: Optional[str] = None,
+    overrides_path: Optional[Path] = None,
 ) -> FastAPI:
     """Return a FastAPI app wired with core managers."""
 
@@ -56,6 +58,12 @@ def create_app(
         commit_window=getattr(task_manager.config, "commit_window", 5),
     )
     vault = vault or SecretVault()
+    if webhook_secret is None:
+        webhook_secret = vault.get_secret("github_webhook_secret") or ""
+    overrides_path = overrides_path or Path("overrides.log")
+    from .webhooks import OverrideStore, create_webhook_router
+
+    override_store = OverrideStore(overrides_path)
 
     app = FastAPI(title="Autonomy API", version="1.0")
 
@@ -138,5 +146,8 @@ def create_app(
         if slack_token:
             vault.set_secret("slack_token", slack_token)
         return RedirectResponse("/settings", status_code=303)
+
+    # ---------------------------- Webhooks -----------------------------
+    app.include_router(create_webhook_router(webhook_secret, override_store))
 
     return app
