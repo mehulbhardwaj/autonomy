@@ -1,0 +1,176 @@
+- Merge pull request #95 from mehulbhardwaj/codex/implement-phase-1-of-issue-90-and-run-tests
+- feat: finalize production CLI features
+- Merge pull request #97 from mehulbhardwaj/mehulbhardwaj-patch-1
+- Update README.md
+- Merge pull request #96 from mehulbhardwaj/mehulbhardwaj-patch-1
+- Update README.md
+- Fix board commands imports
+- Add phase 2 CLI and config features
+- feat(cli): add interactive mode and completion
+- Merge pull request #94 from mehulbhardwaj/codex/implement-issue-89-and-update-tests
+- Add documentation suite and tests
+- Merge pull request #93 from mehulbhardwaj/codex/implement-issue-#88-and-update-tests
+- feat: improve error handling framework
+- Merge pull request #92 from mehulbhardwaj/codex/implement-issue-#87-and-update-tests
+- fix: preserve patched auth scope validator
+- Disable telemetry during tests and adjust CLI startup test
+- Fix CLI imports and caching
+- feat: add async issue fetch and lazy imports
+- Merge pull request #91 from mehulbhardwaj/codex/implement-issue-#86-and-update-tests
+- chore: include release tests in CI
+- Merge pull request #85 from mehulbhardwaj/codex/add-contributing.md-and-code-of-conduct
+- docs: add contributing guidelines and diagrams
+- Merge pull request #84 from mehulbhardwaj/codex/start-testing-and-setup-for-project
+- docs: document release workflow
+- Merge pull request #83 from mehulbhardwaj/codex/complete-task-from-issue-69
+- Complete metrics scheduling and tracking
+- Merge pull request #82 from mehulbhardwaj/codex/complete-task-from-issue-68-comments
+- Add nightly backlog doctor service
+- Merge pull request #81 from mehulbhardwaj/codex/complete-task-from-issue-66
+- Integrate planning CLI
+- Merge pull request #80 from mehulbhardwaj/codex/update-licensing-and-branding-information
+- Switch project to GPLv3
+- Merge pull request #79 from mehulbhardwaj/h2bdzc-codex/review-implementation-and-complete-gaps
+- fix tests for AutonomyPlatform args
+- Add GitHub tool wrappers and disable Mem0 telemetry
+- Merge pull request #78 from mehulbhardwaj/codex/implement-issue-69-and-update-tests
+- feat(metrics): add metrics collector and slack reporting
+- Merge pull request #77 from mehulbhardwaj/codex/implement-issue-68-and-run-tests
+- feat: add nightly backlog doctor with slack digest
+- Merge pull request #76 from mehulbhardwaj/codex/implement-issue-#67-and-update-tests
+- feat(tasks): add hierarchy maintenance
+- Merge pull request #75 from mehulbhardwaj/codex/implement-issue-66-and-update-tests
+- Implement CLI planning commands
+- Merge pull request #74 from mehulbhardwaj/codex/implement-issue-53-and-add-tests
+- Add planning CLI commands and tests
+- Merge pull request #73 from mehulbhardwaj/codex/implement-issue-49-and-update-tests
+- Add admin permission and error logging tests
+- Merge pull request #72 from mehulbhardwaj/codex/implement-missing-human-approval-gate
+- Add human approval step to planning workflow
+- Merge pull request #71 from mehulbhardwaj/codex/add-configurable-api-keys-ui-settings-page
+- Add settings UI for configuring API keys
+- Merge pull request #70 from mehulbhardwaj/codex/complete-mem0-integration
+- Use in-memory qdrant for Mem0
+- Add langchain-community dependency
+- Format platform after mem0 integration
+- Integrate mem0
+- Merge pull request #65 from mehulbhardwaj/codex/evaluate-ci-setup-and-integration-gaps
+- test: ensure model_selector injection
+- Merge pull request #64 from mehulbhardwaj/codex/implement-issue-48-and-update-tests
+- Add LangGraph planning workflow
+- Merge pull request #63 from mehulbhardwaj/codex/implement-issue-49-and-update-tests
+- feat: add tool registry with permissions
+- Merge pull request #62 from mehulbhardwaj/codex/implement-issue-#47-and-update-tests
+- feat: add repository-scoped memory
+- Merge pull request #61 from mehulbhardwaj/codex/implement-issue-46-and-update-tests
+- feat: add OpenRouter LLM integration
+- Merge pull request #60 from mehulbhardwaj/8twoff-codex/implement-issue-53-in-phases
+- Load ranking weights from file and show memory
+- Merge pull request #58 from mehulbhardwaj/codex/implement-issue-25-and-update-tests
+- Merge pull request #57 from mehulbhardwaj/codex/implement-issue-24-and-update-tests
+- feat(auth): auto GitHub OAuth
+- feat: add distribution utilities and tests
+- Merge pull request #56 from mehulbhardwaj/codex/implement-issue-#51-and-update-tests
+- chore: remove outdated MCP docs
+- Merge pull request #55 from mehulbhardwaj/codex/implement-issue-#50-and-update-tests
+- Add flake8 test and fix lint errors
+- cleanup: remove mcp remnants
+- Merge pull request #54 from mehulbhardwaj/codex/implement-feature-from-issue-16-and-add-tests
+- Add cache path option to board init
+- docs: consolidate PRD, archive legacy docs, clean up test artifacts
+- chore: remove duplicate docs after restore, keep only archive/ versions
+- restore: docs and README updates from lost commit
+- Merge pull request #45 from mehulbhardwaj/codex/implement-issue-#23-and-run-tests
+- Style: fix imports after isort
+- Add Slack notifications module
+- Merge pull request #44 from mehulbhardwaj/codex/implement-issue-22-and-update-tests
+- Fix variable names to satisfy flake8
+- Implement Slack slash commands
+- Merge pull request #43 from mehulbhardwaj/codex/implement-issue-19-and-run-tests
+- Fix flake8 unused imports
+- feat: add configurable ranking engine
+- Merge pull request #42 from mehulbhardwaj/codex/implement-issue-18-and-add-tests
+- Add file-based pinning system
+- Merge pull request #41 from mehulbhardwaj/codex/implement-issue-17-and-add-tests
+- Fix flake8 error in board_manager
+- feat: add priority ranking system
+- Merge pull request #40 from mehulbhardwaj/codex/implement-issue-#9-and-run-tests
+- Implement basic Slack integration
+- Merge pull request #39 from mehulbhardwaj/vhnku7-codex/implement-issue-#8-and-add-tests
+- Fix flake8 issues
+- Pin httpx and add fastapi dependency
+- Add FastAPI server with task and doctor endpoints
+- Merge pull request #37 from mehulbhardwaj/codex/implement-issue-#7-and-update-tests
+- Fix flake8 issues
+- Enhance audit logger with git commits
+- Merge pull request #36 from mehulbhardwaj/codex/implement-issue-#6-and-add-tests
+- Add Backlog Doctor feature and tests
+- Merge pull request #34 from mehulbhardwaj/codex/implement-issue-#25-and-run-all-tests
+- Fix flake8 and import ordering
+- feat: implement GitHub OAuth device flow
+- Merge pull request #33 from mehulbhardwaj/codex/implement-issue-24-and-add-tests
+- feat: add pipx packaging and verify utility
+- Merge pull request #32 from mehulbhardwaj/codex/verify-test-coverage-and-setup-scaffolding
+- Run scaffold tests in CI
+- Add project scaffolding utilities and tests
+- Merge pull request #31 from mehulbhardwaj/codex/implement-issue-21-and-update-tests
+- Implement Slack OAuth and CLI integration
+- Merge pull request #29 from mehulbhardwaj/codex/implement-issue-16-and-run-tests
+- Fix flake8 error in board init test
+- Add board cache config and tests
+- Merge pull request #28 from mehulbhardwaj/codex/implement-task-and-add-tests-to-ci
+- Fix scaffold job test coverage
+- Add GitHub OAuth device-flow and tests
+- Merge pull request #27 from mehulbhardwaj/codex/implement-issue-#16-and-add-new-tests
+- Expand CLI board tests
+- Include board manager in coverage
+- Improve test coverage handling
+- Adjust coverage settings to ensure tests pass
+- Add tests to local checks
+- Add board scaffold tests to CI
+- Handle field options in board manager
+- Implement professional Phase 0 enhancements based on user feedback
+- Simplify GitHub issues to remove unnecessary complexity
+- Update technical architecture and PRD with GitHub Projects v2 focus
+- Remove test file
+- Test push with mehulbhardwaj SSH key
+- Test push with id_ed25519 SSH key
+- Merge pull request #15 from mehulbhardwaj/codex/implement-issue-5-and-run-tests
+- Update Autonomy_Planning_Agent_PRD.md
+- Fix isort formatting and add isort check test
+- Add hierarchy tests and style fixes
+- Merge pull request #14 from mehulbhardwaj/codex/implement-feature-request-from-issue-#4
+- Run tests and ensure pre-commit passes
+- Fix formatting and add black check
+- Add task list command and tests
+- Merge pull request #13 from mehulbhardwaj/codex/add-tests-for-implementation-scaffolding
+- Fix test formatting and remove unused imports
+- Add CLI and vault tests
+- Merge pull request #12 from mehulbhardwaj/codex/complete-implementation-and-add-tests
+- Format tests
+- Format CLI with black
+- Remove .coverage from version control
+- Merge pull request #11 from mehulbhardwaj/codex/update-and-close-issue-#1
+- Document issue completion
+- Format PAT scope tests
+- Fix flake8 issues
+- Add PAT scope validation
+- Merge pull request #10 from mehulbhardwaj/codex/execute-github-issue-#1
+- Configure flake8 line length
+- Include isort in dev dependencies
+- Clean up CI config and tests
+- Fix CI workflow and tests
+- Add CI workflow, pre-commit and dev docs
+- Update Autonomy_Planning_Agent_PRD.md
+- Update Autonomy_Planning_Agent_PRD.md
+- Update Autonomy_Planning_Agent_PRD.md
+- Rename USAGE_GUIDE.md to USAGE_GUIDE_v1.md
+- Rename PLAN.md to PLAN_v1.md
+- Rename TEST.md to TEST_v1.md
+- Rename PRD.md to PRD_v1.md
+- Update Autonomy_Planning_Agent_PRD.md
+- Update Autonomy_Planning_Agent_PRD.md
+- Add files via upload
+- added Planning Agent PRD
+- docs: update and align documentation with v0.1.0 implementation
+- Initial commit: Autonomy MCP v0.1.0

@@ -61,13 +61,10 @@ pytest
 
 ## 📚 Documentation
 
-- **[Technical Architecture](docs/TECH.md)**
-- **[Development Setup](docs/DEVELOPMENT_SETUP.md)**
-- **[Test Strategy](docs/TEST.md)**
-- **[User Guide](docs/USER_GUIDE.md)**
-- **[Installation](docs/INSTALLATION.md)**
-- **[Configuration](docs/CONFIGURATION.md)**
-- **[API Reference](docs/API.md)**
+- **[Product Requirements](docs/PRD.md)** - Complete product vision and requirements
+- **[Technical Architecture](docs/TECH.md)** - System design and implementation details  
+- **[Development Setup](docs/DEVELOPMENT_SETUP.md)** - Local development environment setup
+- **[Test Strategy](docs/TEST.md)** - Testing approach and coverage strategy
 
 ---
 
