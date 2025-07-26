@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from ..audit.logger import AuditLogger
+from ..core.config import WorkflowConfig
 from ..github.issue_manager import IssueManager
+from .hierarchy_manager import HierarchyManager
 from .pinned_items import PinnedItemsStore
 from .ranking import RankingConfig, RankingEngine
 
@@ -19,13 +23,24 @@ class TaskManager:
         pinned_store: PinnedItemsStore | None = None,
         ranking_config: RankingConfig | None = None,
         config_path: str | None = None,
+        *,
+        audit_logger: Optional["AuditLogger"] = None,
+        config: WorkflowConfig | None = None,
     ) -> None:
-        self.issue_manager = IssueManager(github_token, owner, repo)
+        self.config = config or WorkflowConfig()
+        self.issue_manager = IssueManager(
+            github_token, owner, repo, audit_logger=audit_logger
+        )
+        self.audit_logger = audit_logger or getattr(
+            self.issue_manager, "audit_logger", None
+        )
         self.pinned_store = pinned_store or PinnedItemsStore()
         self.project_id = f"{owner}/{repo}"
         self.ranking = RankingEngine(
             ranking_config, config_path=Path(config_path) if config_path else None
         )
+        self.sync_cooldown = getattr(self.config, "hierarchy_sync_cooldown", 60)
+        self._last_sync = 0.0
 
     # -------------------------- retrieval helpers ---------------------------
     def _score_issue(
@@ -130,6 +145,7 @@ class TaskManager:
             self.rollover_subtasks(issue_number)
         if notes:
             self.issue_manager.add_comment(issue_number, notes)
+        self._trigger_sync()
         return success
 
     # --------------------------- subtask helpers ---------------------------
@@ -137,3 +153,28 @@ class TaskManager:
         """Placeholder for subtask rollover logic."""
         # TODO: implement rollover of incomplete subtasks to new issues
         return True
+
+    def _trigger_sync(self) -> None:
+        """Run hierarchy sync asynchronously."""
+
+        import time
+
+        if time.time() - self._last_sync < self.sync_cooldown:
+            return
+
+        self._last_sync = time.time()
+
+        def run() -> None:
+            cfg = getattr(self, "config", WorkflowConfig())
+            hm = HierarchyManager(
+                self.issue_manager,
+                orphan_threshold=cfg.hierarchy_orphan_threshold,
+            )
+            hm.maintain_hierarchy()
+            if self.audit_logger:
+                self.audit_logger.log(
+                    "hierarchy_sync_auto",
+                    {"project": self.project_id, "created": "auto"},
+                )
+
+        threading.Thread(target=run, daemon=True).start()

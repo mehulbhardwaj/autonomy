@@ -25,6 +25,8 @@ class TestWorkflowConfig:
         assert config.test_coverage_target == 0.75
         assert config.autonomy_level == "supervised"
         assert config.board_cache_path.endswith("field_cache.json")
+        assert config.hierarchy_orphan_threshold == 3
+        assert config.hierarchy_sync_cooldown == 60
 
     def test_custom_config(self):
         """Test custom configuration values."""

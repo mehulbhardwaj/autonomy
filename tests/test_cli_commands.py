@@ -469,3 +469,20 @@ def test_cmd_metrics_export(tmp_path: Path, capsys):
     assert main.cmd_metrics_export(manager, args) == 0
     out = capsys.readouterr().out
     assert "autonomy_time_to_task_avg" in out
+
+
+def test_cmd_hierarchy_sync(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+
+    class DummyHM:
+        def __init__(self, im, orphan_threshold=3):
+            assert orphan_threshold == 3
+
+        def maintain_hierarchy(self):
+            return {"created": [1], "orphans": [2]}
+
+    monkeypatch.setattr("src.tasks.hierarchy_manager.HierarchyManager", DummyHM)
+    args = SimpleNamespace(
+        dry_run=False, force=False, verbose=False, orphan_threshold=None
+    )
+    assert main.cmd_hierarchy_sync(manager, args) == 0

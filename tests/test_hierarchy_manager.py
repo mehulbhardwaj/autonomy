@@ -18,7 +18,9 @@ class DummyIssueManager:
     def get_issue(self, issue_number):
         return next((i for i in self._issues if i["number"] == issue_number), None)
 
-    def update_issue(self, issue_number, *, title=None, body=None, labels=None):
+    def update_issue(
+        self, issue_number, *, title=None, body=None, labels=None, return_response=False
+    ):
         for issue in self._issues:
             if issue["number"] == issue_number:
                 if body is not None:
@@ -28,7 +30,12 @@ class DummyIssueManager:
                 if labels is not None:
                     issue["labels"] = labels
         self.updated = (issue_number, body)
-        return True
+
+        class Resp:
+            status_code = 200
+            headers = {}
+
+        return Resp() if return_response else True
 
 
 def _make_issue(num, label, body=""):
@@ -63,8 +70,9 @@ def test_find_orphans():
     dummy = DummyIssueManager(issues)
     hm = HierarchyManager(dummy, orphan_threshold=3)
     nodes = hm.build_tree()
-    orphans = hm.warn_on_orphans(nodes)
+    orphans, count = hm.warn_on_orphans(nodes)
     assert len(orphans) == 4
+    assert count == 4
 
 
 def test_subtask_parent_creation_and_visualize():
@@ -78,6 +86,7 @@ def test_subtask_parent_creation_and_visualize():
     # Should create a task parent
     assert created
     assert dummy.created[0][1].labels == ["task"]
+    assert dummy.created[0][1].body == ""
     text = hm.visualize(nodes)
     assert "Issue 1" in text
 
@@ -110,6 +119,7 @@ def test_auto_create_feature_for_orphan_task():
     created = hm.ensure_parents(nodes)
     assert created
     assert dummy.created[0][1].labels == ["feature"]
+    assert dummy.created[0][1].body == ""
     assert nodes[1].parent == 100
 
 
@@ -117,8 +127,9 @@ def test_warn_on_orphans_below_threshold():
     issues = [_make_issue(1, "task"), _make_issue(2, "task")]
     hm = HierarchyManager(DummyIssueManager(issues), orphan_threshold=3)
     nodes = hm.build_tree()
-    orphans = hm.warn_on_orphans(nodes)
+    orphans, count = hm.warn_on_orphans(nodes)
     assert orphans == []
+    assert count == 2
 
 
 def test_create_tasklist_hierarchy():
@@ -134,6 +145,45 @@ def test_create_tasklist_hierarchy():
     hm.create_tasklist_hierarchy(parent, [child])
     assert dummy.updated[0] == 1
     assert "#2" in dummy.updated[1]
+
+
+def test_create_tasklist_rate_limit(monkeypatch):
+    issues = [_make_issue(1, "epic"), _make_issue(2, "task", "Parent: #1")]
+
+    class RLManager(DummyIssueManager):
+        def __init__(self, issues):
+            super().__init__(issues)
+            self.calls = 0
+
+        def update_issue(
+            self,
+            issue_number,
+            *,
+            title=None,
+            body=None,
+            labels=None,
+            return_response=False,
+        ):
+            self.calls += 1
+
+            class Resp:
+                def __init__(self, code):
+                    self.status_code = code
+                    self.headers = {"Retry-After": "0"}
+
+            if self.calls == 1:
+                self.updated = (issue_number, body)
+                return Resp(429)
+            self.updated = (issue_number, body)
+            return Resp(200)
+
+    dummy = RLManager(issues)
+    hm = HierarchyManager(dummy)
+    nodes = hm.build_tree()
+    parent = nodes[1]
+    child = nodes[2]
+    assert hm.create_tasklist_hierarchy(parent, [child])
+    assert dummy.calls == 2
 
 
 def test_maintain_hierarchy_creates_parents_and_updates_tasklists():
