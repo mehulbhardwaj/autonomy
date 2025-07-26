@@ -23,9 +23,10 @@ def _sign(secret: str, body: bytes) -> str:
 def test_github_webhook(tmp_path: Path) -> None:
     secret = "s3"
     overrides = tmp_path / "ovr.log"
+    log = tmp_path / "log"
     app = create_app(
         DummyIssueManager(),
-        AuditLogger(tmp_path / "log"),
+        AuditLogger(log),
         webhook_secret=secret,
         overrides_path=overrides,
     )
@@ -44,6 +45,8 @@ def test_github_webhook(tmp_path: Path) -> None:
     entry = json.loads(data[0])
     assert entry["event"] == "issues"
     assert entry["payload"]["action"] == "edited"
+    logs = list(AuditLogger(log).iter_logs())
+    assert logs and logs[0]["operation"] == "github_webhook"
 
 
 def test_webhook_bad_signature(tmp_path: Path) -> None:
@@ -61,3 +64,21 @@ def test_webhook_bad_signature(tmp_path: Path) -> None:
         "/webhook/github", data=body, headers={"X-Hub-Signature-256": "wrong"}
     )
     assert r.status_code == 400
+
+
+def test_webhook_rate_limit(tmp_path: Path) -> None:
+    secret = "s3"
+    overrides = tmp_path / "ovr.log"
+    app = create_app(
+        DummyIssueManager(),
+        AuditLogger(tmp_path / "log"),
+        webhook_secret=secret,
+        overrides_path=overrides,
+        webhook_rate_limit=2,
+    )
+    client = TestClient(app)
+    body = json.dumps({}).encode()
+    headers = {"X-Hub-Signature-256": _sign(secret, body)}
+    assert client.post("/webhook/github", data=body, headers=headers).status_code == 200
+    assert client.post("/webhook/github", data=body, headers=headers).status_code == 200
+    assert client.post("/webhook/github", data=body, headers=headers).status_code == 429

@@ -32,6 +32,7 @@ def create_app(
     vault: Optional["SecretVault"] = None,
     webhook_secret: Optional[str] = None,
     overrides_path: Optional[Path] = None,
+    webhook_rate_limit: int = 30,
 ) -> FastAPI:
     """Return a FastAPI app wired with core managers."""
 
@@ -148,6 +149,13 @@ def create_app(
         return RedirectResponse("/settings", status_code=303)
 
     # ---------------------------- Webhooks -----------------------------
-    app.include_router(create_webhook_router(webhook_secret, override_store))
+    app.include_router(
+        create_webhook_router(
+            webhook_secret,
+            override_store,
+            audit_logger=audit_logger,
+            rate_limit=webhook_rate_limit,
+        )
+    )
 
     return app
