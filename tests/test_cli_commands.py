@@ -482,7 +482,28 @@ def test_cmd_hierarchy_sync(monkeypatch, tmp_path: Path):
             return {"created": [1], "orphans": [2]}
 
     monkeypatch.setattr("src.tasks.hierarchy_manager.HierarchyManager", DummyHM)
+
+    created_bot = None
+
+    class DummyBot:
+        def __init__(self, *a, **kw):
+            nonlocal created_bot
+            created_bot = self
+            self.calls = []
+
+        def post_message(self, channel, text, blocks=None):
+            self.calls.append((channel, text))
+            return True
+
+    monkeypatch.setattr("src.slack.SlackBot", DummyBot)
     args = SimpleNamespace(
-        dry_run=False, force=False, verbose=False, orphan_threshold=None
+        dry_run=False,
+        force=False,
+        verbose=False,
+        orphan_threshold=None,
+        slack_channel="C",
+        slack_token="tok",
     )
     assert main.cmd_hierarchy_sync(manager, args) == 0
+    assert created_bot is not None
+    assert created_bot.calls

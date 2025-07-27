@@ -29,6 +29,7 @@ class MetricsCollector:
         prev = self.storage.get_latest_metrics(repository)
         curr_wau = self.calculate_wau()
         curr_approval = self.calculate_approval_rate()
+        curr_orphans = self.calculate_orphan_count()
         metrics = {
             "date": datetime.now().date(),
             "repository": repository,
@@ -45,7 +46,10 @@ class MetricsCollector:
             "loc_per_assignee": self.calculate_loc_per_assignee(),
             "sprint_completion_rate": self.calculate_sprint_completion(),
             "open_issues_count": self.github.get_open_issues_count(repository),
-            "orphan_issues_count": self.calculate_orphan_count(),
+            "orphan_issues_count": curr_orphans,
+            "orphan_issues_change_pct": self.calculate_trend(
+                curr_orphans, prev.get("orphan_issues_count") if prev else None
+            ),
             "planning_commands_used": self.audit.count_command_usage("plan"),
             "human_overrides_count": self.audit.count_human_overrides(),
         }
