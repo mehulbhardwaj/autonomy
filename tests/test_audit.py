@@ -14,6 +14,10 @@ class DummyIM:
         self.labels = (issue_number, add_labels, remove_labels)
         return True
 
+    def update_issue_state(self, issue_number, state):
+        self.state = (issue_number, state)
+        return True
+
     def create_pull_request(self, title, body, head, base="main"):
         self.pr = {
             "title": title,
@@ -46,7 +50,12 @@ def test_logger_and_undo(tmp_path: Path) -> None:
         ["git", "-C", str(tmp_path), "log", "-1", "--pretty=%s"],
         text=True,
     ).strip()
-    assert h in log
+    logs = list(logger.iter_logs())
+    undo_entry = logs[-1]
+    assert undo_entry["operation"] == "undo_operation"
+    assert undo_entry["details"]["target_hash"] == h
+    assert undo_entry["details"]["commit_window"] == 5
+    assert undo_entry["hash"] in log
 
     # verify diff hash is stored
     entry = next(logger.iter_logs())
@@ -115,3 +124,18 @@ def test_embed_diff_hash(tmp_path: Path) -> None:
     undo = UndoManager(dummy, logger)
     assert undo.embed_diff_hash(2, "abcd1234")
     assert dummy.comment == (2, "diff-hash: `abcd1234`")
+
+
+def test_undo_logs_entry(tmp_path: Path) -> None:
+    logger = AuditLogger(tmp_path / "audit.log")
+    dummy = DummyIM()
+    h = logger.log("update_state", {"issue": 1, "previous": "open"})
+    undo = UndoManager(dummy, logger, commit_window=3)
+    assert undo.undo(h)
+    logs = list(logger.iter_logs())
+    assert len(logs) == 2
+    undo_entry = logs[-1]
+    assert undo_entry["operation"] == "undo_operation"
+    details = undo_entry.get("details", {})
+    assert details.get("target_hash") == h
+    assert details.get("commit_window") == 3

@@ -255,6 +255,16 @@ autonomy metrics performance
 autonomy cache clear
 ```
 
+### Undo Operations
+
+```bash
+# Undo the last operation
+autonomy undo --last
+
+# Undo specific hash with custom window
+autonomy undo abcd1234 --commit-window 3
+```
+
 ### Debug Mode
 
 ```bash

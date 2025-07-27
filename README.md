@@ -129,6 +129,15 @@ autonomy board reorder
 autonomy hierarchy-sync
 ```
 
+**Undo Operations:**
+```bash
+# Undo the last change
+autonomy undo --last
+
+# Specify a custom commit window
+autonomy undo <hash> --commit-window 3
+```
+
 ---
 
 ## 🤝 Contributing

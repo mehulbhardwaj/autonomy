@@ -24,7 +24,17 @@ class UndoManager:
         logs = self._load_logs()
         for entry in reversed(logs):
             if entry.get("hash") == hash_value or entry.get("diff_hash") == hash_value:
-                return self._apply(entry)
+                success = self._apply(entry)
+                if success and self.logger:
+                    self.logger.log(
+                        "undo_operation",
+                        {
+                            "target_hash": entry.get("hash"),
+                            "diff_hash": entry.get("diff_hash"),
+                            "commit_window": self.commit_window,
+                        },
+                    )
+                return success
         return False
 
     def undo_last(self) -> Optional[str]:
@@ -33,6 +43,15 @@ class UndoManager:
             return None
         last = logs[-1]
         if self._apply(last):
+            if self.logger:
+                self.logger.log(
+                    "undo_operation",
+                    {
+                        "target_hash": last.get("hash"),
+                        "diff_hash": last.get("diff_hash"),
+                        "commit_window": self.commit_window,
+                    },
+                )
             return last.get("hash")
         return None
 
