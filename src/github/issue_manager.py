@@ -400,6 +400,39 @@ class IssueManager:
             return False
 
     # ------------------------------------------------------------------
+    def create_pull_request(
+        self,
+        title: str,
+        body: str,
+        head: str,
+        base: str = "main",
+    ) -> Optional[int]:
+        """Create a pull request and return its number."""
+        try:
+            sess = self.session or requests
+            response = sess.post(
+                f"{self.base_url}/pulls",
+                headers=self.headers,
+                json={"title": title, "body": body, "head": head, "base": base},
+            )
+            if response.status_code in (200, 201):
+                pr = response.json()
+                if self.audit_logger:
+                    self.audit_logger.log(
+                        "create_pr",
+                        {
+                            "pr": pr.get("number"),
+                            "title": title,
+                            "head": head,
+                            "base": base,
+                        },
+                    )
+                return pr.get("number")
+        except Exception:
+            pass
+        return None
+
+    # ------------------------------------------------------------------
     def get_open_issues_count(self, repo: str | None = None) -> int:
         """Return the number of open issues for ``repo``."""
         try:
