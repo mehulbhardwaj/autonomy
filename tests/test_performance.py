@@ -7,6 +7,8 @@ from types import SimpleNamespace
 import pytest
 
 from src.cli.main import cmd_next
+from src.tasks.pinned_items import PinnedItemsStore
+from src.tasks.task_manager import TaskManager
 
 
 class DummyTM:
@@ -55,3 +57,37 @@ def test_next_command_performance(monkeypatch):
     duration = time.time() - start
     assert rc == 0
     assert duration < 3.0
+
+
+def test_get_next_task_large_repo_performance(monkeypatch):
+    """Ensure TaskManager can handle large numbers of issues quickly."""
+
+    issues = [
+        {
+            "number": i,
+            "title": f"t{i}",
+            "labels": [],
+            "created_at": "2025-01-01T00:00:00Z",
+        }
+        for i in range(1000)
+    ]
+
+    class LargeDummyIM:
+        def list_issues(self, state="open"):
+            return issues
+
+    tm = TaskManager.__new__(TaskManager)
+    tm.issue_manager = LargeDummyIM()
+    tm.pinned_store = PinnedItemsStore()
+    tm.project_id = "o/r"
+    tm.ranking = SimpleNamespace(score_issue=lambda *a, **kw: 1.0)
+    tm.sync_cooldown = 0
+    tm._last_sync = 0
+    tm.audit_logger = None
+
+    start = time.time()
+    issue = tm.get_next_task()
+    duration = time.time() - start
+
+    assert issue is not None
+    assert duration < 1.0
