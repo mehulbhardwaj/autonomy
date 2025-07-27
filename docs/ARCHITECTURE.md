@@ -312,6 +312,15 @@ class SlackTools:
     def send_message(self, channel: str, message: str):
         return self.slack_bot.send_message(channel, message)
 ```
+### API Endpoints & Webhook Integration
+Autonomy interacts with GitHub and Slack using a small set of endpoints:
+
+- **GitHub GraphQL** – Projects v2 field creation, board ranking, hierarchy sync
+- **GitHub REST** – Issue updates, status checks, and pull request management
+- **Slack Web API** – Posting digests and undo confirmations
+
+Webhook listeners capture manual overrides and mirror them into the planning engine. Use the `overrides` webhook endpoint to track field edits and card drags.
+
 
 ---
 
@@ -400,6 +409,7 @@ class SecurityManager:
 - **Permission Management**: Basic permission checks for tools and actions
 - **Data Privacy**: Memory system respects data privacy requirements
 - **Reversible Actions**: All automated changes can be undone
+- **Undo System**: Each change produces a diff hash and can be reverted via the `/api/undo` endpoint or `autonomy undo` command.
 
 ---
 
