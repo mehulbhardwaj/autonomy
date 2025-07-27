@@ -292,6 +292,9 @@ autonomy undo --last
 
 # Undo specific hash with custom window
 autonomy undo abcd1234 --commit-window 3
+
+# Create a shadow PR for recent changes
+autonomy audit shadow-pr --limit 3
 ```
 
 ### Debug Mode
