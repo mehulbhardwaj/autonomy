@@ -7,6 +7,7 @@ https://autonomyhub.vercel.app
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Actions](https://github.com/mehulbhardwaj/autonomy/workflows/CI/badge.svg)](https://github.com/mehulbhardwaj/autonomy/actions)
+[![codecov](https://codecov.io/gh/mehulbhardwaj/autonomy/branch/main/graph/badge.svg)](https://codecov.io/gh/mehulbhardwaj/autonomy)
 
 **Open source platform enabling humans + AI to collaborate for knowledge work** – An intelligent GitHub planning system with configurable AI agents that learn from your team's patterns and coordinate tasks across humans and specialized AI assistants.
 
