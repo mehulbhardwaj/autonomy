@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Dict, Iterable, Optional
 
@@ -9,14 +10,22 @@ from .client import ResilientGitHubClient
 
 
 class GraphQLClient:
-    """Minimal GitHub GraphQL client with retry logic."""
+    """Minimal GitHub GraphQL client with retry logic and caching."""
 
-    def __init__(self, token: str) -> None:
+    def __init__(self, token: str, *, cache_ttl: int = 60) -> None:
         self.token = token
         self.url = "https://api.github.com/graphql"
         self.client = ResilientGitHubClient()
+        self.cache_ttl = cache_ttl
+        self._cache: dict[tuple[str, str], tuple[float, dict]] = {}
+        self.rate_limit_info: dict[str, str] = {}
 
     def execute(self, query: str, variables: Optional[dict] = None) -> dict:
+        key = (query, json.dumps(variables or {}, sort_keys=True))
+        now = time.monotonic()
+        cached = self._cache.get(key)
+        if cached and now - cached[0] < self.cache_ttl:
+            return cached[1]
         response = self.client.make_request(
             "post",
             self.url,
@@ -27,6 +36,7 @@ class GraphQLClient:
             json={"query": query, "variables": variables or {}},
             timeout=10,
         )
+        self.rate_limit_info = self.client.rate_limit_info
         if response.status_code != 200:
             raise GitHubAPIError(
                 f"GraphQL error: {response.status_code} {response.text}",
@@ -35,6 +45,7 @@ class GraphQLClient:
         data = response.json()
         if data.get("errors"):
             raise GitHubAPIError(str(data["errors"]))
+        self._cache[key] = (now, data.get("data", {}))
         return data.get("data", {})
 
 

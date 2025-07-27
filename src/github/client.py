@@ -21,6 +21,7 @@ class ResilientGitHubClient:
         adapter = HTTPAdapter(max_retries=retry_strategy)
         self.session.mount("http://", adapter)
         self.session.mount("https://", adapter)
+        self.rate_limit_info: dict[str, str] = {}
 
     @backoff.on_exception(
         backoff.expo, requests.exceptions.RequestException, max_tries=3
@@ -28,4 +29,10 @@ class ResilientGitHubClient:
     def make_request(
         self, method: str, url: str, **kwargs
     ):  # pragma: no cover - simple wrapper
-        return self.session.request(method, url, **kwargs)
+        response = self.session.request(method, url, **kwargs)
+        self.rate_limit_info = {
+            k: v
+            for k, v in response.headers.items()
+            if k.lower().startswith("x-ratelimit")
+        }
+        return response
