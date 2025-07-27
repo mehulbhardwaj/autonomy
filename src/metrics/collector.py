@@ -26,12 +26,22 @@ class MetricsCollector:
     # ------------------------------------------------------------------
     def collect_daily_metrics(self, repository: str) -> str:
         """Collect metrics, store them and return a Slack report."""
+        prev = self.storage.get_latest_metrics(repository)
+        curr_wau = self.calculate_wau()
+        curr_approval = self.calculate_approval_rate()
         metrics = {
             "date": datetime.now().date(),
             "repository": repository,
             "time_to_task_avg": self.calculate_time_to_task(),
-            "approval_rate": self.calculate_approval_rate(),
-            "weekly_active_users": self.calculate_wau(),
+            "approval_rate": curr_approval,
+            "approval_rate_change_pct": self.calculate_trend(
+                curr_approval, prev.get("approval_rate") if prev else None
+            ),
+            "weekly_active_users": curr_wau,
+            "wau_change_pct": self.calculate_trend(
+                curr_wau, prev.get("weekly_active_users") if prev else None
+            ),
+            "override_rate": self.calculate_override_rate(),
             "loc_per_assignee": self.calculate_loc_per_assignee(),
             "sprint_completion_rate": self.calculate_sprint_completion(),
             "open_issues_count": self.github.get_open_issues_count(repository),
@@ -77,6 +87,17 @@ class MetricsCollector:
         approvals = self.audit.count_approvals(days=7)
         total = self.audit.count_ai_recommendations(days=7)
         return (approvals / total * 100) if total > 0 else 0.0
+
+    def calculate_override_rate(self) -> float:
+        total = self.audit.count_ai_recommendations(days=7)
+        overrides = self.audit.count_human_overrides()
+        return (overrides / total * 100) if total > 0 else 0.0
+
+    @staticmethod
+    def calculate_trend(current: float, previous: float | None) -> float:
+        if previous is None or previous == 0:
+            return 0.0
+        return (current - previous) / previous * 100.0
 
     # ------------------------------------------------------------------
     def generate_slack_report(self, metrics: Dict[str, Any]) -> str:
