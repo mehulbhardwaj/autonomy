@@ -49,6 +49,7 @@ dev = [
     "pytest>=6.0",
     "pytest-cov>=2.0",
     "pytest-asyncio>=0.18.0",
+    "pytest-timeout>=2.1.0",
     "black>=21.0",
     "isort>=5.10",
     "flake8>=3.8",
@@ -127,7 +128,7 @@ addopts = [
     "--cov=src",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "--cov-fail-under=80",
+    "--cov-fail-under=90",
     "-v"
 ]
 
