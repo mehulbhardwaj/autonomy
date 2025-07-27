@@ -89,3 +89,70 @@ def test_slash_undo(tmp_path: Path):
     handler = SlashCommandHandler(tm)
     resp = handler.handle_command("/autonomy undo", {"text": h})
     assert "Undo" in resp["text"]
+
+
+def test_slash_undo_window(tmp_path: Path):
+    from src.audit.logger import AuditLogger
+    from src.core.config import WorkflowConfig
+
+    tm = DummyTM()
+    tm.issue_manager = tm  # type: ignore[attr-defined]
+    tm.audit_logger = AuditLogger(tmp_path / "audit.log")
+    tm.config = WorkflowConfig(commit_window=2)
+    h = tm.audit_logger.log(
+        "update_labels", {"issue": 1, "add_labels": ["a"], "remove_labels": None}
+    )
+    handler = SlashCommandHandler(tm)
+    resp = handler.handle_command("/autonomy undo", {"text": h})
+    assert "window=2" in resp["text"]
+
+
+def test_slash_undo_invalid(tmp_path: Path) -> None:
+    tm = DummyTM()
+    tm.issue_manager = tm  # type: ignore[attr-defined]
+    tm.audit_logger = __import__(
+        "src.audit.logger", fromlist=["AuditLogger"]
+    ).AuditLogger(tmp_path / "log.json")
+    handler = SlashCommandHandler(tm)
+    resp = handler.handle_command("/autonomy undo", {"text": "bad-hash"})
+    assert "Usage" in resp["text"]
+
+
+def test_slash_undo_not_found(tmp_path: Path) -> None:
+    from src.audit.logger import AuditLogger
+
+    tm = DummyTM()
+    tm.issue_manager = tm  # type: ignore[attr-defined]
+    tm.audit_logger = AuditLogger(tmp_path / "log.json")
+    handler = SlashCommandHandler(tm)
+    resp = handler.handle_command("/autonomy undo", {"text": "deadbeef"})
+    assert "not found" in resp["text"]
+
+
+def test_slash_undo_notification(tmp_path: Path) -> None:
+    from src.audit.logger import AuditLogger
+    from src.slack.notifications import SystemNotifier
+
+    class DummyNotifier(SystemNotifier):
+        def __init__(self) -> None:
+            self.called = False
+
+        def send_undo_confirmation(self, channel: str, operation):  # type: ignore[override]
+            self.called = True
+            return True
+
+    tm = DummyTM()
+    tm.issue_manager = tm  # type: ignore[attr-defined]
+    tm.audit_logger = AuditLogger(tmp_path / "log.json")
+    tm.system_notifier = DummyNotifier()
+
+    h = tm.audit_logger.log(
+        "update_labels", {"issue": 1, "add_labels": ["a"], "remove_labels": None}
+    )
+    handler = SlashCommandHandler(tm)
+    resp = handler.handle_command(
+        "/autonomy undo",
+        {"text": h, "channel_id": "C", "user_name": "u"},
+    )
+    assert tm.system_notifier.called
+    assert "Undo" in resp["text"]

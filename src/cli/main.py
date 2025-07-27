@@ -114,6 +114,7 @@ Examples:
 Environment Variables:
   GITHUB_TOKEN    GitHub personal access token
   WORKSPACE_PATH  Default workspace path (default: current directory)
+  AUTONOMY_COMMIT_WINDOW  Limit undo operations (default: 5)
         """,
     )
 
@@ -319,6 +320,11 @@ Environment Variables:
     undo_parser = subparsers.add_parser("undo", help="Undo operations")
     undo_parser.add_argument("hash", nargs="?", help="Operation hash")
     undo_parser.add_argument("--last", action="store_true", help="Undo last operation")
+    undo_parser.add_argument(
+        "--commit-window",
+        type=int,
+        help="Limit undo to last N operations (default from config)",
+    )
 
     # Slack command
     slack_parser = subparsers.add_parser("slack", help="Slack related commands")
@@ -1196,21 +1202,35 @@ def cmd_undo(manager: WorkflowManager, args) -> int:
     """Undo a previously logged operation."""
     from ..audit.undo import UndoManager
 
+    window = (
+        getattr(args, "commit_window", None)
+        if getattr(args, "commit_window", None) is not None
+        else getattr(manager.config, "commit_window", 5)
+    )
+    if window <= 0:
+        print("commit_window must be positive")
+        return 1
     um = UndoManager(
         manager.issue_manager,
         manager.audit_logger,
-        commit_window=getattr(manager.config, "commit_window", 5),
+        commit_window=window,
     )
     if args.last:
         result = um.undo_last()
         if not result:
             print("No operations to undo")
             return 1
-        print(f"✓ Undid {result}")
+        msg = f"✓ Undid {result} (window={window})"
+        if window > 10:
+            print("Warning: large commit window", file=sys.stderr)
+        print(msg)
         return 0
     if args.hash:
         if um.undo(args.hash):
-            print(f"✓ Undid {args.hash}")
+            msg = f"✓ Undid {args.hash} (window={window})"
+            if window > 10:
+                print("Warning: large commit window", file=sys.stderr)
+            print(msg)
             return 0
         print("✗ Undo failed")
         return 1
