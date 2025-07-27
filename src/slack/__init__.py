@@ -10,6 +10,7 @@ from .notifications import (
     MetricsDashboard,
     NotificationScheduler,
     NotificationTemplates,
+    OrphanNotifier,
     SystemNotifier,
 )
 from .oauth import SlackOAuth, verify_slack_signature
@@ -42,6 +43,7 @@ __all__ = [
     "SlackBot",
     "BacklogDoctorNotifier",
     "MetricsDashboard",
+    "OrphanNotifier",
     "SystemNotifier",
     "NotificationTemplates",
     "NotificationScheduler",

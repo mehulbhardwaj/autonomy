@@ -267,6 +267,14 @@ Environment Variables:
         type=int,
         help="Number of orphans before warnings",
     )
+    hier_sync_parser.add_argument(
+        "--slack-channel",
+        help="Send warnings to this Slack channel",
+    )
+    hier_sync_parser.add_argument(
+        "--slack-token",
+        help="Slack API token (optional)",
+    )
 
     # Board command
     board_parser = subparsers.add_parser("board", help="Manage project board")
@@ -1155,6 +1163,22 @@ def cmd_hierarchy_sync(manager: WorkflowManager, args) -> int:
         print(
             f"\N{WARNING SIGN} Orphans detected ({len(result['orphans'])}): {', '.join(map(str, result['orphans']))}"
         )
+        if getattr(args, "slack_channel", None):
+            from ..core.secret_vault import SecretVault
+
+            token = (
+                getattr(args, "slack_token", None)
+                or os.getenv("SLACK_TOKEN")
+                or SecretVault().get_secret("slack_token")
+            )
+            if token:
+                from ..slack import OrphanNotifier, SlackBot
+
+                bot = SlackBot(token)
+                notifier = OrphanNotifier(bot)
+                notifier.send_orphan_warning(
+                    args.slack_channel, len(result["orphans"]), result["orphans"]
+                )
     return 0
 
 

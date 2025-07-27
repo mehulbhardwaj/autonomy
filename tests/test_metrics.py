@@ -117,3 +117,4 @@ def test_metrics_trend(tmp_path: Path, monkeypatch) -> None:
     data = json.loads(files[-1].read_text())
     assert data["wau_change_pct"] == 100.0
     assert data["approval_rate_change_pct"] == -37.5
+    assert data["orphan_issues_change_pct"] == 0.0
