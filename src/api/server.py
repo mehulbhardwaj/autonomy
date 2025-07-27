@@ -38,6 +38,7 @@ def create_app(
 
     task_manager = TaskManager.__new__(TaskManager)
     task_manager.issue_manager = issue_manager
+    issue_manager.on_change = task_manager._trigger_sync
     from ..tasks.pinned_items import PinnedItemsStore
 
     task_manager.pinned_store = PinnedItemsStore()
