@@ -267,3 +267,12 @@ Issues progress through these states in the development process:
 - All tests must pass
 - No direct pushes allowed
 - Human approval required for merge
+
+### API & Webhook Interfaces
+
+- **/api/rankings** – Returns ranked backlog data
+- **/api/undo/{hash}** – Reverts a recorded operation
+- **/webhook/overrides** – Captures manual board changes
+
+These endpoints allow external integrations and manual overrides to feed back
+into the planning engine while keeping a full audit trail.
