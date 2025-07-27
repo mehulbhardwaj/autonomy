@@ -16,11 +16,22 @@ class AuditLogger:
         If ``True`` the logger will commit updates to ``log_path`` using Git.
     """
 
-    def __init__(self, log_path: Path, use_git: bool = False) -> None:
+    def __init__(
+        self,
+        log_path: Path,
+        use_git: bool = False,
+        *,
+        overrides_path: Path | None = None,
+    ) -> None:
         self.log_path = Path(log_path)
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.log_path.exists():
             self.log_path.touch()
+        self.overrides_path = (
+            Path(overrides_path)
+            if overrides_path is not None
+            else self.log_path.with_name("overrides.log")
+        )
         self.use_git = use_git
         self.repo_path = self.log_path.parent
         if self.use_git:
@@ -64,6 +75,24 @@ class AuditLogger:
                     yield json.loads(line)
                 except json.JSONDecodeError:
                     continue
+
+    # ------------------------------------------------------------------
+    def count_human_overrides(self) -> int:
+        """Return the number of manual override events."""
+        if not self.overrides_path.exists():
+            return 0
+        with self.overrides_path.open("r", encoding="utf-8") as f:
+            return sum(1 for line in f if line.strip())
+
+    def count_command_usage(self, cmd: str) -> int:
+        """Return count of tool executions matching ``cmd``."""
+        count = 0
+        for entry in self.iter_logs() or []:
+            if entry.get("operation") == "tool_execute":
+                details = entry.get("details", {})
+                if details.get("tool") == cmd or details.get("action") == cmd:
+                    count += 1
+        return count
 
     # ------------------------------------------------------------------
     # Internal helpers
