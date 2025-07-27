@@ -174,9 +174,15 @@ autonomy doctor nightly
 
 ### Metrics and Reporting
 
+Daily metrics include weekly active users (WAU), approval rates,
+time-to-task statistics and other workflow insights.
+
 ```bash
 # View daily metrics
 autonomy metrics daily
+
+# Monitor weekly active users and approval rate
+autonomy metrics daily --repos owner/repo
 
 # Export metrics
 autonomy metrics export --format json
@@ -292,6 +298,9 @@ autonomy undo --last
 
 # Undo specific hash with custom window
 autonomy undo abcd1234 --commit-window 3
+
+# Create a shadow PR for recent changes
+autonomy audit shadow-pr --limit 3
 ```
 
 ### Debug Mode

@@ -4,6 +4,7 @@ from types import SimpleNamespace
 import src.cli.main as main
 from src.cli.main import (
     cmd_audit,
+    cmd_audit_shadow_pr,
     cmd_board_init,
     cmd_board_rank,
     cmd_board_reorder,
@@ -55,6 +56,15 @@ class DummyIssueManager:
     def add_comment(self, issue_number, comment):
         self.comment = (issue_number, comment)
         return True
+
+    def create_pull_request(self, title, body, head, base="main"):
+        self.pr = {
+            "title": title,
+            "body": body,
+            "head": head,
+            "base": base,
+        }
+        return 1
 
     def get_issue(self, issue_number):
         return self.issues.get(issue_number)
@@ -415,6 +425,18 @@ def test_cmd_audit_and_undo(tmp_path: Path):
     args_undo = SimpleNamespace(hash=h, last=False)
     assert cmd_undo(manager, args_undo) == 0
     assert manager.issue_manager.labels == (1, [], ["a"])
+
+
+def test_cmd_audit_shadow_pr(tmp_path: Path):
+    manager = DummyManager(tmp_path)
+    manager.audit_logger.log(
+        "update_labels", {"issue": 1, "add_labels": ["a"], "remove_labels": None}
+    )
+    args = SimpleNamespace(audit_cmd="shadow-pr", limit=1, base="main")
+    assert cmd_audit_shadow_pr(manager, args) == 0
+    assert manager.issue_manager.pr and manager.issue_manager.pr["head"].startswith(
+        "shadow-"
+    )
 
 
 def test_cmd_undo_commit_window_override(tmp_path: Path):

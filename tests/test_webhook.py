@@ -113,3 +113,25 @@ def test_webhook_triggers_sync(tmp_path: Path, monkeypatch) -> None:
     }
     assert client.post("/webhook/github", data=body, headers=headers).status_code == 200
     assert called.get("count", 0) == 1
+
+
+def test_overrides_webhook(tmp_path: Path) -> None:
+    overrides = tmp_path / "ovr.log"
+    log = tmp_path / "log"
+    app = create_app(
+        DummyIssueManager(),
+        AuditLogger(log, overrides_path=overrides),
+        overrides_path=overrides,
+    )
+    client = TestClient(app)
+
+    payload = {"field": "priority", "value": "high"}
+    resp = client.post("/webhook/overrides", json=payload)
+    assert resp.status_code == 200
+    data = overrides.read_text().strip().splitlines()
+    assert len(data) == 1
+    entry = json.loads(data[0])
+    assert entry["event"] == "override"
+    assert entry["payload"]["field"] == "priority"
+    logger = AuditLogger(log, overrides_path=overrides)
+    assert logger.count_human_overrides() == 1

@@ -141,6 +141,9 @@ autonomy undo --last
 
 # Specify a custom commit window
 autonomy undo <hash> --commit-window 3
+
+# Generate a shadow branch PR for recent changes
+autonomy audit shadow-pr --limit 3
 ```
 
 ---

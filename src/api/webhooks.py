@@ -103,4 +103,21 @@ def create_webhook_router(
             task_manager._trigger_sync()
         return {"success": True}
 
+    @router.post("/webhook/overrides")
+    async def overrides_webhook(request: Request) -> dict[str, bool]:
+        """Record manual override events."""
+        if not limiter.allow():
+            raise HTTPException(status_code=429, detail="Too many requests")
+        try:
+            payload = await request.json()
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid payload")
+        store.add("override", payload)
+        if audit_logger:
+            audit_logger.log("manual_override", payload)
+        logger.info("Override webhook received")
+        if task_manager:
+            task_manager._trigger_sync()
+        return {"success": True}
+
     return router
