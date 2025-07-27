@@ -14,7 +14,7 @@
 5. **Error Resilience**: Test graceful degradation and error recovery
 
 ### Quality Standards
-- **Unit Test Coverage**: >80% for core business logic
+ - **Unit Test Coverage**: >90% for core business logic
 - **Integration Test Coverage**: >70% for API interactions
 - **E2E Test Coverage**: All critical user workflows
 - **Performance Benchmarks**: Basic response time targets met
@@ -475,7 +475,7 @@ jobs:
 ```
 
 ### 9.2 Quality Gates
-- **Unit Tests**: Must pass with >80% coverage
+- **Unit Tests**: Must pass with >90% coverage
 - **Integration Tests**: Must pass with <5% flaky test rate
 - **E2E Tests**: Must pass for all critical workflows
 - **Performance Tests**: Must meet response time targets
