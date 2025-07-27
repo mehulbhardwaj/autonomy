@@ -56,6 +56,9 @@ pytest
 - **GitHub Integration:** Issues, Projects v2, authentication, board bootstrap, hierarchy management
 - **Slack Integration:** Basic bot, slash commands, notifications
 - **Task Management:** Priority ranking, manual override (pin/unpin), breakdown, dependencies
+- **Hierarchy Sync:** Auto-create parents with Tasklists API
+- **Undo System:** Shadow branch PRs and diff hash restore
+- **Metrics & Notifications:** Daily metrics reports and Slack alerts
 - **Security & Storage:** OS-native secret storage, basic audit logging
 - **Documentation:** Comprehensive user and developer docs
 
