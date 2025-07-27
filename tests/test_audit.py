@@ -139,3 +139,21 @@ def test_undo_logs_entry(tmp_path: Path) -> None:
     details = undo_entry.get("details", {})
     assert details.get("target_hash") == h
     assert details.get("commit_window") == 3
+
+
+def test_audit_metrics_counts(tmp_path: Path) -> None:
+    logger = AuditLogger(tmp_path / "audit.log")
+    logger.log(
+        "tool_execute",
+        {"tool": "dummy", "action": "do", "agent": "a1", "success": True},
+    )
+    logger.log(
+        "tool_execute",
+        {"tool": "dummy", "action": "do", "agent": "a2", "success": False},
+    )
+    logger.log("undo_operation", {"target_hash": "abcd"})
+
+    assert logger.count_ai_recommendations() == 2
+    assert logger.count_approvals() == 1
+    assert logger.weekly_active_users() == 2
+    assert logger.count_undo_operations() == 1
