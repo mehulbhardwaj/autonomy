@@ -417,6 +417,20 @@ def test_cmd_audit_and_undo(tmp_path: Path):
     assert manager.issue_manager.labels == (1, [], ["a"])
 
 
+def test_cmd_undo_commit_window_override(tmp_path: Path):
+    manager = DummyManager(tmp_path)
+    h1 = manager.audit_logger.log(
+        "update_labels", {"issue": 1, "add_labels": ["a"], "remove_labels": None}
+    )
+    h2 = manager.audit_logger.log(
+        "update_labels", {"issue": 2, "add_labels": ["b"], "remove_labels": None}
+    )
+    args = SimpleNamespace(hash=h1, last=False, commit_window=1)
+    assert cmd_undo(manager, args) == 1
+    args.hash = h2
+    assert cmd_undo(manager, args) == 0
+
+
 def test_cmd_pin_unpin_and_list(monkeypatch, tmp_path: Path, capsys):
     manager = DummyManager(tmp_path)
 

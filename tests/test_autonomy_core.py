@@ -50,6 +50,11 @@ class TestWorkflowConfig:
         loaded = WorkflowConfig.from_yaml(f)
         assert loaded.max_file_lines == 123
 
+    def test_env_commit_window(self, monkeypatch):
+        monkeypatch.setenv("AUTONOMY_COMMIT_WINDOW", "7")
+        cfg = WorkflowConfig.load_default()
+        assert cfg.commit_window == 7
+
 
 class TestAgents:
     """Test agent functionality."""
