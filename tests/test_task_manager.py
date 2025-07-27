@@ -1,4 +1,6 @@
+import time
 from datetime import datetime, timedelta, timezone
+from types import SimpleNamespace
 
 from src.tasks.pinned_items import PinnedItemsStore
 from src.tasks.task_manager import TaskManager
@@ -46,6 +48,14 @@ def test_get_next_task(monkeypatch, tmp_path):
     from src.tasks.ranking import RankingEngine
 
     tm.ranking = RankingEngine()
+    tm.sync_cooldown = 0
+    tm._last_sync = 0
+    tm.audit_logger = None
+    tm.audit_logger = None
+    tm.audit_logger = None
+    tm.audit_logger = None
+    tm.audit_logger = None
+    tm.audit_logger = None
     issue = tm.get_next_task()
     assert issue["number"] == 2
 
@@ -73,6 +83,9 @@ def test_update_task(monkeypatch):
     from src.tasks.ranking import RankingEngine
 
     tm.ranking = RankingEngine()
+    tm.sync_cooldown = 0
+    tm._last_sync = 0
+    tm.audit_logger = None
     assert tm.update_task(3, status="in-progress", done=True, notes="done")
     assert dummy.updated == (3, ["in-progress"], None)
     assert dummy.state_update == (3, "closed")
@@ -119,6 +132,8 @@ def test_update_task_rollover(monkeypatch):
     from src.tasks.ranking import RankingEngine
 
     tm.ranking = RankingEngine()
+    tm.sync_cooldown = 0
+    tm._last_sync = 0
     called = {}
 
     def roll(num):
@@ -128,6 +143,68 @@ def test_update_task_rollover(monkeypatch):
     tm.rollover_subtasks = roll
     tm.update_task(4, done=True)
     assert called["issue"] == 4
+
+
+def test_update_task_triggers_sync(monkeypatch):
+    dummy = DummyIssueManager([])
+    tm = TaskManager.__new__(TaskManager)
+    tm.issue_manager = dummy
+    from src.tasks.ranking import RankingEngine
+
+    tm.ranking = RankingEngine()
+    tm.sync_cooldown = 0
+    tm._last_sync = 0
+    tm.audit_logger = None
+
+    called = {}
+
+    def fake_sync(self):
+        called["sync"] = True
+        return {"created": [], "orphans": []}
+
+    monkeypatch.setattr(
+        "src.tasks.hierarchy_manager.HierarchyManager.maintain_hierarchy",
+        fake_sync,
+    )
+    monkeypatch.setattr(
+        "threading.Thread",
+        lambda target, daemon=False: SimpleNamespace(start=lambda: target()),
+    )
+    tm.update_task(1, status="in-progress")
+    assert called.get("sync")
+
+
+def test_sync_debounce(monkeypatch):
+    dummy = DummyIssueManager([])
+    tm = TaskManager.__new__(TaskManager)
+    tm.issue_manager = dummy
+    from src.tasks.ranking import RankingEngine
+
+    tm.ranking = RankingEngine()
+    tm.sync_cooldown = 5
+    tm._last_sync = time.time()
+    tm.audit_logger = None
+
+    called = {}
+
+    def fake_sync(self):
+        called.setdefault("count", 0)
+        called["count"] += 1
+        return {"created": [], "orphans": []}
+
+    monkeypatch.setattr(
+        "src.tasks.hierarchy_manager.HierarchyManager.maintain_hierarchy",
+        fake_sync,
+    )
+    monkeypatch.setattr(
+        "threading.Thread",
+        lambda target, daemon=False: SimpleNamespace(start=lambda: target()),
+    )
+    tm._trigger_sync()
+    assert called.get("count", 0) == 0
+    tm._last_sync = time.time() - 6
+    tm._trigger_sync()
+    assert called.get("count", 0) == 1
 
 
 def test_pinned_items_skipped(tmp_path):

@@ -1,8 +1,13 @@
-# Autonomy Planning Agent (Core)
+
+# Autonomy Hub
+
+<img src="assets/autonomy_logo_lightbg.png" alt="Autonomy Logo" width="50" style="vertical-align: middle; margin-right: 25px;"/>
+https://autonomyhub.vercel.app
 
 [![License: GPLv3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![GitHub Actions](https://github.com/mehulbhardwaj/autonomy/workflows/CI/badge.svg)](https://github.com/mehulbhardwaj/autonomy/actions)
+[![codecov](https://codecov.io/gh/mehulbhardwaj/autonomy/branch/main/graph/badge.svg)](https://codecov.io/gh/mehulbhardwaj/autonomy)
 
 **Open source platform enabling humans + AI to collaborate for knowledge work** – An intelligent GitHub planning system with configurable AI agents that learn from your team's patterns and coordinate tasks across humans and specialized AI assistants.
 
@@ -52,6 +57,9 @@ pytest
 - **GitHub Integration:** Issues, Projects v2, authentication, board bootstrap, hierarchy management
 - **Slack Integration:** Basic bot, slash commands, notifications
 - **Task Management:** Priority ranking, manual override (pin/unpin), breakdown, dependencies
+- **Hierarchy Sync:** Auto-create parents with Tasklists API
+- **Undo System:** Shadow branch PRs and diff hash restore
+- **Metrics & Notifications:** Daily metrics reports and Slack alerts
 - **Security & Storage:** OS-native secret storage, basic audit logging
 - **Documentation:** Comprehensive user and developer docs
 
@@ -67,6 +75,7 @@ pytest
 ### For Developers
 - **[Technical Architecture](docs/ARCHITECTURE.md)** - System design and implementation details
 - **[Product Requirements](docs/REQUIREMENTS.md)** - Product vision, roadmap, and development workflow
+- **[Implementation Timeline](docs/PLAN.md)** - Week-by-week delivery plan
 - **[Testing Strategy](docs/TEST.md)** - Testing approach and coverage strategy
 
 ### Documentation Structure
@@ -120,6 +129,18 @@ autonomy board rank
 
 # Reorder items
 autonomy board reorder
+
+# Sync hierarchy
+autonomy hierarchy-sync
+```
+
+**Undo Operations:**
+```bash
+# Undo the last change
+autonomy undo --last
+
+# Specify a custom commit window
+autonomy undo <hash> --commit-window 3
 ```
 
 ---

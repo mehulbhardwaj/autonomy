@@ -25,6 +25,8 @@ class TestWorkflowConfig:
         assert config.test_coverage_target == 0.75
         assert config.autonomy_level == "supervised"
         assert config.board_cache_path.endswith("field_cache.json")
+        assert config.hierarchy_orphan_threshold == 3
+        assert config.hierarchy_sync_cooldown == 60
 
     def test_custom_config(self):
         """Test custom configuration values."""
@@ -47,6 +49,11 @@ class TestWorkflowConfig:
         cfg.save_yaml(f)
         loaded = WorkflowConfig.from_yaml(f)
         assert loaded.max_file_lines == 123
+
+    def test_env_commit_window(self, monkeypatch):
+        monkeypatch.setenv("AUTONOMY_COMMIT_WINDOW", "7")
+        cfg = WorkflowConfig.load_default()
+        assert cfg.commit_window == 7
 
 
 class TestAgents:

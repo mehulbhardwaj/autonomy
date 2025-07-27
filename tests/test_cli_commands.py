@@ -417,6 +417,20 @@ def test_cmd_audit_and_undo(tmp_path: Path):
     assert manager.issue_manager.labels == (1, [], ["a"])
 
 
+def test_cmd_undo_commit_window_override(tmp_path: Path):
+    manager = DummyManager(tmp_path)
+    h1 = manager.audit_logger.log(
+        "update_labels", {"issue": 1, "add_labels": ["a"], "remove_labels": None}
+    )
+    h2 = manager.audit_logger.log(
+        "update_labels", {"issue": 2, "add_labels": ["b"], "remove_labels": None}
+    )
+    args = SimpleNamespace(hash=h1, last=False, commit_window=1)
+    assert cmd_undo(manager, args) == 1
+    args.hash = h2
+    assert cmd_undo(manager, args) == 0
+
+
 def test_cmd_pin_unpin_and_list(monkeypatch, tmp_path: Path, capsys):
     manager = DummyManager(tmp_path)
 
@@ -469,3 +483,41 @@ def test_cmd_metrics_export(tmp_path: Path, capsys):
     assert main.cmd_metrics_export(manager, args) == 0
     out = capsys.readouterr().out
     assert "autonomy_time_to_task_avg" in out
+
+
+def test_cmd_hierarchy_sync(monkeypatch, tmp_path: Path):
+    manager = DummyManager(tmp_path)
+
+    class DummyHM:
+        def __init__(self, im, orphan_threshold=3):
+            assert orphan_threshold == 3
+
+        def maintain_hierarchy(self):
+            return {"created": [1], "orphans": [2]}
+
+    monkeypatch.setattr("src.tasks.hierarchy_manager.HierarchyManager", DummyHM)
+
+    created_bot = None
+
+    class DummyBot:
+        def __init__(self, *a, **kw):
+            nonlocal created_bot
+            created_bot = self
+            self.calls = []
+
+        def post_message(self, channel, text, blocks=None):
+            self.calls.append((channel, text))
+            return True
+
+    monkeypatch.setattr("src.slack.SlackBot", DummyBot)
+    args = SimpleNamespace(
+        dry_run=False,
+        force=False,
+        verbose=False,
+        orphan_threshold=None,
+        slack_channel="C",
+        slack_token="tok",
+    )
+    assert main.cmd_hierarchy_sync(manager, args) == 0
+    assert created_bot is not None
+    assert created_bot.calls

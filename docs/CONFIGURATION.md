@@ -88,6 +88,10 @@ autonomy init --repo my-org/my-repo --autonomy-level supervised
 | Max Function Lines | `AUTONOMY_MAX_FUNCTION_LINES` | `40` | Maximum lines per function |
 | Test Coverage Target | `AUTONOMY_TEST_COVERAGE_TARGET` | `0.75` | Minimum test coverage (0.0-1.0) |
 | Human Approval | `AUTONOMY_REQUIRE_HUMAN_APPROVAL` | `true` | Require human approval for changes |
+| Commit Window | `AUTONOMY_COMMIT_WINDOW` | `5` | Number of operations that can be undone (override with `--commit-window`) |
+| Board Cache Path | `AUTONOMY_BOARD_CACHE_PATH` | `~/.autonomy/field_cache.json` | Path to project field cache |
+| Hierarchy Orphan Threshold | `AUTONOMY_HIERARCHY_ORPHAN_THRESHOLD` | `3` | Number of orphaned items before warnings |
+| Hierarchy Sync Cooldown | `AUTONOMY_HIERARCHY_SYNC_COOLDOWN` | `60` | Minimum minutes between sync operations |
 
 ### Slack Configuration
 
@@ -161,6 +165,16 @@ export AUTONOMY_MAX_FUNCTION_LINES="40"
 
 # Set maximum PR size
 export AUTONOMY_MAX_PR_LINES="500"
+```
+
+### Undo System
+
+```bash
+# Limit undo to last 10 operations
+export AUTONOMY_COMMIT_WINDOW="10"
+
+# Override for a single command
+autonomy undo --last --commit-window 3
 ```
 
 ### Test Coverage

@@ -9,7 +9,7 @@ import argparse
 import asyncio
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import httpx
 import requests
@@ -65,6 +65,8 @@ class IssueManager:
         repo: str,
         audit_logger=None,
         session: requests.Session | None = None,
+        *,
+        on_change: Callable[[], None] | None = None,
     ):
         self.github_token = github_token
         self.owner = owner
@@ -76,6 +78,8 @@ class IssueManager:
             "Content-Type": "application/json",
         }
         self.session = session
+
+        self.on_change = on_change
 
         # Optional audit logger for tracking operations
         self.audit_logger = audit_logger
@@ -295,11 +299,14 @@ class IssueManager:
                 json={"state": state},
             )
             success = response.status_code == 200
-            if success and self.audit_logger:
-                self.audit_logger.log(
-                    "update_state",
-                    {"issue": issue_number, "new": state},
-                )
+            if success:
+                if self.audit_logger:
+                    self.audit_logger.log(
+                        "update_state",
+                        {"issue": issue_number, "new": state},
+                    )
+                if self.on_change:
+                    self.on_change()
             return success
         except Exception:
             return False
@@ -331,15 +338,18 @@ class IssueManager:
                 json={"labels": labels},
             )
             success = response.status_code == 200
-            if success and self.audit_logger:
-                self.audit_logger.log(
-                    "update_labels",
-                    {
-                        "issue": issue_number,
-                        "add_labels": add_labels,
-                        "remove_labels": remove_labels,
-                    },
-                )
+            if success:
+                if self.audit_logger:
+                    self.audit_logger.log(
+                        "update_labels",
+                        {
+                            "issue": issue_number,
+                            "add_labels": add_labels,
+                            "remove_labels": remove_labels,
+                        },
+                    )
+                if self.on_change:
+                    self.on_change()
             return success
         except Exception:
             return False
@@ -351,7 +361,8 @@ class IssueManager:
         title: Optional[str] = None,
         body: Optional[str] = None,
         labels: Optional[List[str]] = None,
-    ) -> bool:
+        return_response: bool = False,
+    ) -> bool | requests.Response:
         """Update basic fields on an issue."""
         payload: Dict[str, Any] = {}
         if title is not None:
@@ -370,12 +381,15 @@ class IssueManager:
                 json=payload,
             )
             success = response.status_code == 200
-            if success and self.audit_logger:
-                self.audit_logger.log(
-                    "update_issue",
-                    {k: payload[k] for k in payload.keys()},
-                )
-            return success
+            if success:
+                if self.audit_logger:
+                    self.audit_logger.log(
+                        "update_issue",
+                        {k: payload[k] for k in payload.keys()},
+                    )
+                if self.on_change:
+                    self.on_change()
+            return response if return_response else success
         except Exception:
             return False
 
@@ -389,14 +403,50 @@ class IssueManager:
                 json={"assignees": assignees},
             )
             success = response.status_code == 200
-            if success and self.audit_logger:
-                self.audit_logger.log(
-                    "assign_issue",
-                    {"issue": issue_number, "assignees": assignees},
-                )
+            if success:
+                if self.audit_logger:
+                    self.audit_logger.log(
+                        "assign_issue",
+                        {"issue": issue_number, "assignees": assignees},
+                    )
+                if self.on_change:
+                    self.on_change()
             return success
         except Exception:
             return False
+
+    # ------------------------------------------------------------------
+    def create_pull_request(
+        self,
+        title: str,
+        body: str,
+        head: str,
+        base: str = "main",
+    ) -> Optional[int]:
+        """Create a pull request and return its number."""
+        try:
+            sess = self.session or requests
+            response = sess.post(
+                f"{self.base_url}/pulls",
+                headers=self.headers,
+                json={"title": title, "body": body, "head": head, "base": base},
+            )
+            if response.status_code in (200, 201):
+                pr = response.json()
+                if self.audit_logger:
+                    self.audit_logger.log(
+                        "create_pr",
+                        {
+                            "pr": pr.get("number"),
+                            "title": title,
+                            "head": head,
+                            "base": base,
+                        },
+                    )
+                return pr.get("number")
+        except Exception:
+            pass
+        return None
 
     # ------------------------------------------------------------------
     def get_open_issues_count(self, repo: str | None = None) -> int:

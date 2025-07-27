@@ -4,6 +4,7 @@ Workflow Configuration
 Configuration settings for the Generate-Verify loop workflow.
 """
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict
@@ -56,6 +57,13 @@ class WorkflowConfig:
     # Board configuration
     board_cache_path: str = "~/.autonomy/field_cache.json"
 
+    # Undo configuration
+    commit_window: int = 5
+
+    # Hierarchy management
+    hierarchy_orphan_threshold: int = 3
+    hierarchy_sync_cooldown: int = 60
+
     # ------------------------------------------------------------------
     @classmethod
     def from_yaml(cls, path: Path) -> "WorkflowConfig":
@@ -76,12 +84,20 @@ class WorkflowConfig:
     def load_default(cls) -> "WorkflowConfig":
         """Load default configuration from ~/.autonomy/config.yml if present."""
         default = Path.home() / ".autonomy" / "config.yml"
+        data: Dict[str, Any] = {}
         if default.exists():
             try:
-                return cls.from_yaml(default)
+                data = yaml.safe_load(default.read_text()) or {}
             except Exception:
-                pass
-        return cls()
+                data = {}
+        config = cls.from_dict(data)
+        env_window = os.getenv("AUTONOMY_COMMIT_WINDOW")
+        if env_window:
+            try:
+                config.commit_window = int(env_window)
+            except ValueError:
+                raise ValueError("AUTONOMY_COMMIT_WINDOW must be an integer")
+        return config
 
     @classmethod
     def from_dict(cls, config_dict: Dict[str, Any]) -> "WorkflowConfig":
@@ -113,5 +129,14 @@ class WorkflowConfig:
             raise ValueError(
                 "autonomy_level must be one of: supervised, semi-autonomous, autonomous"
             )
+
+        if self.hierarchy_orphan_threshold <= 0:
+            raise ValueError("hierarchy_orphan_threshold must be positive")
+
+        if self.hierarchy_sync_cooldown <= 0:
+            raise ValueError("hierarchy_sync_cooldown must be positive")
+
+        if self.commit_window <= 0:
+            raise ValueError("commit_window must be positive")
 
         return True

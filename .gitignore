@@ -179,3 +179,8 @@ audit.log
 ehthumbs.db
 Icon?
 Thumbs.db
+
+# Generated docs
+docs/PRD.md
+docs/TECH.md
+docs/WORKFLOW.md

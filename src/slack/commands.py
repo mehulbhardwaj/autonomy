@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List, Optional
 
 from .mapping import SlackGitHubMapper
+from .notifications import SystemNotifier, UndoOperation
 
 
 class SlashCommandHandler:
@@ -21,6 +23,8 @@ class SlashCommandHandler:
             return self.handle_update_command(args)
         if command == "/autonomy status":
             return self.handle_status_command(args)
+        if command == "/autonomy undo":
+            return self.handle_undo_command(args)
         return self.handle_help_command()
 
     def handle_next_command(self, args: Dict) -> Dict:
@@ -78,13 +82,22 @@ class SlashCommandHandler:
         blocks = [
             {
                 "type": "section",
-                "text": {"type": "mrkdwn", "text": f"*Status for {github_user}*"},
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*Status for {github_user}*",
+                },
             },
             {
                 "type": "fields",
                 "fields": [
-                    {"type": "mrkdwn", "text": f"*Open Tasks:* {len(tasks)}"},
-                    {"type": "mrkdwn", "text": f"*In Progress:* {in_progress}"},
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*Open Tasks:* {len(tasks)}",
+                    },
+                    {
+                        "type": "mrkdwn",
+                        "text": f"*In Progress:* {in_progress}",
+                    },
                 ],
             },
         ]
@@ -94,10 +107,61 @@ class SlashCommandHandler:
             "response_type": "ephemeral",
         }
 
+    def handle_undo_command(self, args: Dict) -> Dict:
+        hash_value = args.get("text", "").strip()
+        if not hash_value or not re.fullmatch(r"[0-9a-f]{8}", hash_value):
+            return {
+                "text": "Usage: `/autonomy undo <hash>`",
+                "response_type": "ephemeral",
+            }
+
+        issue_mgr = getattr(self.task_manager, "issue_manager", None)
+        logger = getattr(self.task_manager, "audit_logger", None)
+        if not issue_mgr or not logger:
+            return {"text": "Undo not supported", "response_type": "ephemeral"}
+
+        from src.audit.undo import UndoManager
+
+        logs = list(logger.iter_logs())
+        if not any(
+            entry.get("hash") == hash_value or entry.get("diff_hash") == hash_value
+            for entry in logs
+        ):
+            return {
+                "text": f"Hash `{hash_value}` not found",
+                "response_type": "ephemeral",
+            }
+
+        window = getattr(getattr(self.task_manager, "config", None), "commit_window", 5)
+        undo = UndoManager(issue_mgr, logger, commit_window=window)
+        if undo.undo(hash_value):
+            notifier: SystemNotifier | None = getattr(
+                self.task_manager, "system_notifier", None
+            )
+            if notifier:
+                channel = args.get("channel_id") or args.get("channel")
+                user = args.get("user_name") or args.get("user") or "unknown"
+                op = UndoOperation(
+                    description=f"Undo operation `{hash_value}`",
+                    actor=user,
+                    hash=hash_value,
+                )
+                if channel:
+                    notifier.send_undo_confirmation(channel, op)
+            msg = f"\u2705 Undo {hash_value} completed (window={window})"
+            if window > 10:
+                msg += " - large window"
+            return {"text": msg, "response_type": "in_channel"}
+        return {
+            "text": f"\u274c Undo {hash_value} failed",
+            "response_type": "ephemeral",
+        }
+
     def handle_help_command(self) -> Dict:
         return {
             "text": (
-                "Available commands: /autonomy next, /autonomy update, /autonomy status"
+                "Available commands: /autonomy next, /autonomy update, "
+                "/autonomy status, /autonomy undo"
             )
         }
 
@@ -132,8 +196,13 @@ class SlashCommandHandler:
                 "elements": [
                     {
                         "type": "button",
-                        "text": {"type": "plain_text", "text": "View on GitHub"},
-                        "url": f"https://github.com/{owner}/{repo}/issues/{issue['number']}",
+                        "text": {
+                            "type": "plain_text",
+                            "text": "View on GitHub",
+                        },
+                        "url": (
+                            f"https://github.com/{owner}/{repo}/issues/{issue['number']}"
+                        ),
                     }
                 ],
             },

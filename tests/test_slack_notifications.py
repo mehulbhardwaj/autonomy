@@ -75,3 +75,14 @@ def test_notification_scheduler():
     sched.schedule_weekly("w", "mon", "10:00", func, "C")
     sched.run_scheduler()
     assert called["C"]
+
+
+def test_orphan_notifier():
+    bot = DummySlackBot()
+    from src.slack.notifications import OrphanNotifier
+
+    notifier = OrphanNotifier(bot)  # type: ignore[arg-type]
+    assert notifier.send_orphan_warning("C", 2, [1, 2])
+    ch, text, _ = bot.calls[-1]
+    assert "Orphans detected" in text
+    assert "#1" in text and "#2" in text

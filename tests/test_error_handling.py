@@ -1,3 +1,5 @@
+from requests.models import Response
+
 from src.core.errors import GitHubAPIError, handle_errors
 from src.github.client import ResilientGitHubClient
 
@@ -20,10 +22,12 @@ def test_resilient_github_client(monkeypatch):
     def fake_request(method, url, **kwargs):
         called["method"] = method
         called["url"] = url
-        return "ok"
+        resp = Response()
+        resp.status_code = 200
+        return resp
 
     monkeypatch.setattr(client.session, "request", fake_request)
     result = client.make_request("GET", "http://example.com")
-    assert result == "ok"
+    assert result.status_code == 200
     assert called["method"] == "GET"
     assert "example.com" in called["url"]

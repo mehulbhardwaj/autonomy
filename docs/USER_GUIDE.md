@@ -11,7 +11,8 @@ Autonomy Planning Agent is an intelligent GitHub planning system that enables hu
 3. [Configuration](#configuration)
 4. [Basic Usage](#basic-usage)
 5. [Advanced Features](#advanced-features)
-6. [Troubleshooting](#troubleshooting)
+6. [Examples](#examples)
+7. [Troubleshooting](#troubleshooting)
 
 ## Installation
 
@@ -154,6 +155,13 @@ autonomy board rank
 autonomy board reorder
 ```
 
+### Hierarchy Sync
+
+```bash
+# Sync issue hierarchy with GitHub Tasklists
+autonomy hierarchy-sync --verbose
+```
+
 ### Backlog Management
 
 ```bash
@@ -221,6 +229,17 @@ autonomy memory learn --issue 123 --reason "Priority changed"
 autonomy memory export
 ```
 
+
+## Examples
+
+Useful templates are provided in the `examples/` directory:
+
+- [`agent.yml`](../examples/agent.yml) — sample planning agent configuration
+- [`board_cache.json`](../examples/board_cache.json) — cached board field IDs
+
+Copy these files and adapt them to match your repository.
+
+
 ## Troubleshooting
 
 ### Common Issues
@@ -237,12 +256,22 @@ autonomy auth login --force
 
 #### Board Setup Issues
 
+
 ```bash
 # Reinitialize board
 autonomy board init --force
 
 # Check board status
 autonomy board status
+```
+#### Hierarchy Sync Issues
+
+```bash
+# Run a dry-run sync to identify problems
+autonomy hierarchy-sync --dry-run
+
+# Force sync if items are out of order
+autonomy hierarchy-sync --force
 ```
 
 #### Performance Issues
@@ -253,6 +282,16 @@ autonomy metrics performance
 
 # Clear cache
 autonomy cache clear
+```
+
+### Undo Operations
+
+```bash
+# Undo the last operation
+autonomy undo --last
+
+# Undo specific hash with custom window
+autonomy undo abcd1234 --commit-window 3
 ```
 
 ### Debug Mode

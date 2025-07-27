@@ -187,6 +187,19 @@ class MetricsDashboard:
         )
 
 
+class OrphanNotifier:
+    """Send orphan warning messages."""
+
+    def __init__(self, slack_client: SlackBot) -> None:
+        self.slack_client = slack_client
+
+    def send_orphan_warning(self, channel: str, count: int, numbers: List[int]) -> bool:
+        text = f"\N{WARNING SIGN} Orphans detected ({count}): " + ", ".join(
+            f"#{n}" for n in numbers
+        )
+        return self.slack_client.post_message(channel, text)
+
+
 class SystemNotifier:
     """Send system related notifications."""
 

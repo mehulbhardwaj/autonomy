@@ -114,6 +114,7 @@ Examples:
 Environment Variables:
   GITHUB_TOKEN    GitHub personal access token
   WORKSPACE_PATH  Default workspace path (default: current directory)
+  AUTONOMY_COMMIT_WINDOW  Limit undo operations (default: 5)
         """,
     )
 
@@ -249,6 +250,33 @@ Environment Variables:
 
     metrics_sub.add_parser("export", help="Export metrics in Prometheus format")
 
+    # Hierarchy sync command
+    hier_sync_parser = subparsers.add_parser(
+        "hierarchy-sync", help="Synchronize issue hierarchy"
+    )
+    hier_sync_parser.add_argument(
+        "--dry-run", action="store_true", help="Do not apply changes"
+    )
+    hier_sync_parser.add_argument(
+        "--force", action="store_true", help="Force sync even if no changes"
+    )
+    hier_sync_parser.add_argument(
+        "--verbose", action="store_true", help="Show progress information"
+    )
+    hier_sync_parser.add_argument(
+        "--orphan-threshold",
+        type=int,
+        help="Number of orphans before warnings",
+    )
+    hier_sync_parser.add_argument(
+        "--slack-channel",
+        help="Send warnings to this Slack channel",
+    )
+    hier_sync_parser.add_argument(
+        "--slack-token",
+        help="Slack API token (optional)",
+    )
+
     # Board command
     board_parser = subparsers.add_parser("board", help="Manage project board")
     board_sub = board_parser.add_subparsers(dest="board_cmd")
@@ -292,6 +320,11 @@ Environment Variables:
     undo_parser = subparsers.add_parser("undo", help="Undo operations")
     undo_parser.add_argument("hash", nargs="?", help="Operation hash")
     undo_parser.add_argument("--last", action="store_true", help="Undo last operation")
+    undo_parser.add_argument(
+        "--commit-window",
+        type=int,
+        help="Limit undo to last N operations (default from config)",
+    )
 
     # Slack command
     slack_parser = subparsers.add_parser("slack", help="Slack related commands")
@@ -382,6 +415,8 @@ def _dispatch_command(
             return cmd_metrics_export(manager, args)
         print(f"Unknown metrics command: {args.metrics_cmd}")
         return 1
+    if args.command == "hierarchy-sync":
+        return cmd_hierarchy_sync(manager, args)
     if args.command == "board":
         if args.board_cmd == "init":
             return cmd_board_init(manager, args)
@@ -557,6 +592,7 @@ def cmd_setup(manager: WorkflowManager, args) -> int:
 @handle_errors
 def cmd_process(manager: WorkflowManager, args) -> int:
     """Process issue command"""
+    _ensure_imports()
     console = Console()
     console.print(f"Processing issue #{args.issue} through Generate-Verify loop...")
     from rich.progress import Progress
@@ -634,7 +670,13 @@ def cmd_next(manager: WorkflowManager, args) -> int:
     _ensure_imports()
     from ..tasks.task_manager import TaskManager
 
-    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    tm = TaskManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        audit_logger=getattr(manager, "audit_logger", None),
+        config=getattr(manager, "config", WorkflowConfig()),
+    )
     result = tm.get_next_task(
         assignee=args.assignee,
         team=args.team,
@@ -676,7 +718,13 @@ def cmd_update(manager: WorkflowManager, args) -> int:
     """Update an issue's status or completion."""
     from ..tasks.task_manager import TaskManager
 
-    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    tm = TaskManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        audit_logger=getattr(manager, "audit_logger", None),
+        config=getattr(manager, "config", WorkflowConfig()),
+    )
     success = tm.update_task(
         args.issue, status=args.status, done=args.done, notes=args.notes
     )
@@ -704,7 +752,13 @@ def cmd_list(manager: WorkflowManager, args) -> int:
             print(f"#{num}: {title}")
         return 0
 
-    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    tm = TaskManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        audit_logger=getattr(manager, "audit_logger", None),
+        config=getattr(manager, "config", WorkflowConfig()),
+    )
     assignee = args.assignee
     if args.mine:
         assignee = assignee or os.getenv("GITHUB_USER")
@@ -844,7 +898,13 @@ def cmd_rerank(manager: WorkflowManager, args) -> int:
     """Re-evaluate ranking for open issues."""
     from ..tasks.task_manager import TaskManager
 
-    tm = TaskManager(manager.github_token, manager.owner, manager.repo)
+    tm = TaskManager(
+        manager.github_token,
+        manager.owner,
+        manager.repo,
+        audit_logger=getattr(manager, "audit_logger", None),
+        config=getattr(manager, "config", WorkflowConfig()),
+    )
     tasks = tm.list_tasks()
     if not tasks:
         print("No tasks found")
@@ -1060,6 +1120,74 @@ def cmd_board_reorder(manager: WorkflowManager, args) -> int:
     return 0
 
 
+@handle_errors
+def cmd_hierarchy_sync(manager: WorkflowManager, args) -> int:
+    """Synchronize issue hierarchy."""
+    _ensure_imports()
+    from ..github.issue_manager import IssueManager
+    from ..tasks.hierarchy_manager import HierarchyManager
+
+    issue_manager: IssueManager = manager.issue_manager
+
+    if getattr(args, "dry_run", False):
+
+        class DryRunIM(IssueManager):
+            def __init__(self, base: IssueManager) -> None:
+                self.__dict__.update(base.__dict__)
+                self._counter = 1000000
+
+            def create_issue(self, issue, milestone_number=None):  # type: ignore[override]
+                self._counter += 1
+                print(f"[dry-run] create issue '{issue.title}'")
+                return self._counter
+
+            def update_issue(self, issue_number: int, **kw):  # type: ignore[override]
+                print(f"[dry-run] update issue #{issue_number}")
+
+                class R:
+                    status_code = 200
+                    headers: dict = {}
+
+                return R() if kw.get("return_response") else True
+
+        issue_manager = DryRunIM(manager.issue_manager)
+
+    threshold = args.orphan_threshold or manager.config.hierarchy_orphan_threshold
+    hm = HierarchyManager(issue_manager, orphan_threshold=threshold)
+    if getattr(args, "verbose", False):
+        from rich.progress import Progress
+
+        with Progress(transient=True) as progress:
+            t = progress.add_task("Syncing", total=None)
+            result = hm.maintain_hierarchy()
+            progress.update(t, completed=1)
+    else:
+        result = hm.maintain_hierarchy()
+
+    print(f"Created: {result['created']}")
+    if result["orphans"]:
+        print(
+            f"\N{WARNING SIGN} Orphans detected ({len(result['orphans'])}): {', '.join(map(str, result['orphans']))}"
+        )
+        if getattr(args, "slack_channel", None):
+            from ..core.secret_vault import SecretVault
+
+            token = (
+                getattr(args, "slack_token", None)
+                or os.getenv("SLACK_TOKEN")
+                or SecretVault().get_secret("slack_token")
+            )
+            if token:
+                from ..slack import OrphanNotifier, SlackBot
+
+                bot = SlackBot(token)
+                notifier = OrphanNotifier(bot)
+                notifier.send_orphan_warning(
+                    args.slack_channel, len(result["orphans"]), result["orphans"]
+                )
+    return 0
+
+
 def cmd_audit(manager: WorkflowManager, args) -> int:
     """Show audit log entries."""
     for entry in manager.audit_logger.iter_logs():
@@ -1074,17 +1202,35 @@ def cmd_undo(manager: WorkflowManager, args) -> int:
     """Undo a previously logged operation."""
     from ..audit.undo import UndoManager
 
-    um = UndoManager(manager.issue_manager, manager.audit_logger)
+    window = (
+        getattr(args, "commit_window", None)
+        if getattr(args, "commit_window", None) is not None
+        else getattr(manager.config, "commit_window", 5)
+    )
+    if window <= 0:
+        print("commit_window must be positive")
+        return 1
+    um = UndoManager(
+        manager.issue_manager,
+        manager.audit_logger,
+        commit_window=window,
+    )
     if args.last:
         result = um.undo_last()
         if not result:
             print("No operations to undo")
             return 1
-        print(f"✓ Undid {result}")
+        msg = f"✓ Undid {result} (window={window})"
+        if window > 10:
+            print("Warning: large commit window", file=sys.stderr)
+        print(msg)
         return 0
     if args.hash:
         if um.undo(args.hash):
-            print(f"✓ Undid {args.hash}")
+            msg = f"✓ Undid {args.hash} (window={window})"
+            if window > 10:
+                print("Warning: large commit window", file=sys.stderr)
+            print(msg)
             return 0
         print("✗ Undo failed")
         return 1

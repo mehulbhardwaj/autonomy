@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
@@ -104,7 +105,7 @@ class HierarchyManager:
                     title = f"Auto-created Feature for {node.title}"
                     issue = Issue(
                         title=title,
-                        body=f"Parent: #{node.number}",
+                        body="",
                         labels=["feature"],
                         epic_parent=None,
                     )
@@ -119,7 +120,7 @@ class HierarchyManager:
                     title = f"Auto-created Task for {node.title}"
                     issue = Issue(
                         title=title,
-                        body=f"Parent: #{node.number}",
+                        body="",
                         labels=["task"],
                         epic_parent=None,
                     )
@@ -133,12 +134,14 @@ class HierarchyManager:
         return created
 
     # ------------------------------------------------------------------
-    def warn_on_orphans(self, nodes: Dict[int, IssueNode]) -> List[IssueNode]:
-        """Return list of orphans if count exceeds threshold."""
+    def warn_on_orphans(
+        self, nodes: Dict[int, IssueNode]
+    ) -> tuple[List[IssueNode], int]:
+        """Return (orphans, count). List only returned when count exceeds threshold."""
         orphans = self.find_orphans(nodes)
         if len(orphans) >= self.orphan_threshold:
-            return orphans
-        return []
+            return orphans, len(orphans)
+        return [], len(orphans)
 
     def visualize(self, nodes: Dict[int, IssueNode]) -> str:
         """Return a simple text tree representation."""
@@ -168,13 +171,26 @@ class HierarchyManager:
         body = body.split("## Sub-tasks")[0].rstrip()
         items = [f"- [ ] #{c.number} {c.title}" for c in children]
         new_body = f"{body}\n\n## Sub-tasks\n" + "\n".join(items)
-        self.issue_manager.update_issue(parent.number, body=new_body)
+        try:
+            resp = self.issue_manager.update_issue(
+                parent.number, body=new_body, return_response=True
+            )
+            if hasattr(resp, "status_code") and resp.status_code in {403, 429}:
+                wait = int(resp.headers.get("Retry-After", "1"))
+                time.sleep(wait)
+                resp = self.issue_manager.update_issue(
+                    parent.number, body=new_body, return_response=True
+                )
+            return bool(getattr(resp, "status_code", 200) == 200 or resp is True)
+        except Exception:
+            return False
 
     def maintain_hierarchy(self) -> Dict[str, List[int]]:
         """Ensure hierarchy and update tasklists."""
         nodes = self.build_tree()
         created = self.ensure_parents(nodes)
-        orphans = [o.number for o in self.warn_on_orphans(nodes)]
+        orphans_list, _ = self.warn_on_orphans(nodes)
+        orphans = [o.number for o in orphans_list]
         for node in nodes.values():
             if node.children:
                 self.create_tasklist_hierarchy(node, [nodes[c] for c in node.children])
