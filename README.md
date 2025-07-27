@@ -75,6 +75,7 @@ pytest
 ### For Developers
 - **[Technical Architecture](docs/ARCHITECTURE.md)** - System design and implementation details
 - **[Product Requirements](docs/REQUIREMENTS.md)** - Product vision, roadmap, and development workflow
+- **[Implementation Timeline](docs/PLAN.md)** - Week-by-week delivery plan
 - **[Testing Strategy](docs/TEST.md)** - Testing approach and coverage strategy
 
 ### Documentation Structure
