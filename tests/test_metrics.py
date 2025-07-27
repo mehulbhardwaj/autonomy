@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 from src.metrics import MetricsCollector, MetricsStorage
@@ -88,3 +88,32 @@ def test_export_prometheus(tmp_path: Path) -> None:
     storage.store_daily_metrics("owner/repo", metrics)
     output = storage.export_prometheus()
     assert "autonomy_time_to_task_avg" in output
+
+
+def test_metrics_trend(tmp_path: Path, monkeypatch) -> None:
+    gh = DummyGitHub()
+    audit = DummyAudit()
+    slack = DummySlack()
+    storage = MetricsStorage(tmp_path)
+    collector = MetricsCollector(gh, slack, audit, storage)
+
+    class DummyDateTime:
+        def __init__(self, dt: datetime) -> None:
+            self._dt = dt
+
+        def now(self) -> datetime:  # pragma: no cover - simple shim
+            return self._dt
+
+    dummy_dt = DummyDateTime(datetime(2024, 1, 1))
+    monkeypatch.setattr("src.metrics.collector.datetime", dummy_dt)
+    collector.collect_daily_metrics("owner/repo")
+
+    dummy_dt._dt = datetime(2024, 1, 2)
+    audit.weekly_active_users = lambda: 10  # type: ignore[assignment]
+    audit.count_approvals = lambda days=7: 5  # type: ignore[assignment]
+    collector.collect_daily_metrics("owner/repo")
+
+    files = sorted((tmp_path / "metrics").glob("*.json"))
+    data = json.loads(files[-1].read_text())
+    assert data["wau_change_pct"] == 100.0
+    assert data["approval_rate_change_pct"] == -37.5

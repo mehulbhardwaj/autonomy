@@ -45,3 +45,15 @@ class MetricsStorage:
                 metric = f"autonomy_{key}"
                 lines.append(f'{metric}{{repository="{repo}",date="{date}"}} {value}')
         return "\n".join(lines)
+
+    # ------------------------------------------------------------------
+    def get_latest_metrics(self, repository: str) -> Dict | None:
+        """Return the most recent metrics for ``repository`` if available."""
+        safe_repo = repository.replace("/", "-")
+        files = sorted(self.storage_path.glob(f"{safe_repo}_*.json"), reverse=True)
+        for file in files:
+            try:
+                return json.loads(file.read_text())
+            except Exception:
+                continue
+        return None
