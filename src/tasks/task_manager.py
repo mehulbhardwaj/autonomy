@@ -29,7 +29,11 @@ class TaskManager:
     ) -> None:
         self.config = config or WorkflowConfig()
         self.issue_manager = IssueManager(
-            github_token, owner, repo, audit_logger=audit_logger
+            github_token,
+            owner,
+            repo,
+            audit_logger=audit_logger,
+            on_change=self._trigger_sync,
         )
         self.audit_logger = audit_logger or getattr(
             self.issue_manager, "audit_logger", None
