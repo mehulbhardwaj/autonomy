@@ -315,6 +315,19 @@ Environment Variables:
     audit_parser = subparsers.add_parser("audit", help="Audit related commands")
     audit_sub = audit_parser.add_subparsers(dest="audit_cmd")
     audit_sub.add_parser("log", help="Show audit log")
+    shadow_parser = audit_sub.add_parser(
+        "shadow-pr", help="Create shadow PR from recent audit log entries"
+    )
+    shadow_parser.add_argument(
+        "--limit",
+        type=int,
+        help="Number of log entries to include (default commit window)",
+    )
+    shadow_parser.add_argument(
+        "--base",
+        default="main",
+        help="Base branch for the shadow PR",
+    )
 
     # Undo command
     undo_parser = subparsers.add_parser("undo", help="Undo operations")
@@ -429,6 +442,8 @@ def _dispatch_command(
     if args.command == "audit":
         if args.audit_cmd == "log":
             return cmd_audit(manager, args)
+        if args.audit_cmd == "shadow-pr":
+            return cmd_audit_shadow_pr(manager, args)
         print(f"Unknown audit command: {args.audit_cmd}")
         return 1
     if args.command == "undo":
@@ -1196,6 +1211,25 @@ def cmd_audit(manager: WorkflowManager, args) -> int:
         h = entry.get("hash")
         print(f"{ts} {h} {op}")
     return 0
+
+
+def cmd_audit_shadow_pr(manager: WorkflowManager, args) -> int:
+    """Create a shadow branch PR for recent audit log entries."""
+    from ..audit.undo import UndoManager
+
+    logs = list(manager.audit_logger.iter_logs())
+    limit = args.limit or getattr(manager.config, "commit_window", 5)
+    if limit <= 0:
+        print("limit must be positive")
+        return 1
+    selected = logs[-limit:] if limit else logs
+    um = UndoManager(manager.issue_manager, manager.audit_logger, commit_window=limit)
+    pr = um.create_shadow_branch_pr(selected, base_branch=args.base)
+    if pr:
+        print(f"✓ Created shadow PR #{pr}")
+        return 0
+    print("✗ Failed to create shadow PR")
+    return 1
 
 
 def cmd_undo(manager: WorkflowManager, args) -> int:
