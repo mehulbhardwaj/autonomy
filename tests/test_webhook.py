@@ -82,3 +82,34 @@ def test_webhook_rate_limit(tmp_path: Path) -> None:
     assert client.post("/webhook/github", data=body, headers=headers).status_code == 200
     assert client.post("/webhook/github", data=body, headers=headers).status_code == 200
     assert client.post("/webhook/github", data=body, headers=headers).status_code == 429
+
+
+def test_webhook_triggers_sync(tmp_path: Path, monkeypatch) -> None:
+    secret = "s3"
+    overrides = tmp_path / "ovr.log"
+    log = tmp_path / "log"
+    called = {}
+
+    def fake_sync(self):
+        called.setdefault("count", 0)
+        called["count"] += 1
+
+    monkeypatch.setattr(
+        "src.tasks.task_manager.TaskManager._trigger_sync",
+        fake_sync,
+    )
+    app = create_app(
+        DummyIssueManager(),
+        AuditLogger(log),
+        webhook_secret=secret,
+        overrides_path=overrides,
+    )
+    client = TestClient(app)
+    payload = {"action": "labeled", "issue": {"number": 1}}
+    body = json.dumps(payload).encode()
+    headers = {
+        "X-Hub-Signature-256": _sign(secret, body),
+        "X-GitHub-Event": "issues",
+    }
+    assert client.post("/webhook/github", data=body, headers=headers).status_code == 200
+    assert called.get("count", 0) == 1

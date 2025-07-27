@@ -12,6 +12,7 @@ from typing import Any, Optional
 from fastapi import APIRouter, Header, HTTPException, Request
 
 from ..audit.logger import AuditLogger
+from ..tasks.task_manager import TaskManager
 
 
 class OverrideStore:
@@ -66,6 +67,7 @@ def create_webhook_router(
     audit_logger: Optional["AuditLogger"] = None,
     rate_limit: int = 30,
     period: float = 60.0,
+    task_manager: "TaskManager" | None = None,
 ) -> APIRouter:
     """Create a router handling GitHub webhooks."""
     logger = logging.getLogger(__name__)
@@ -93,6 +95,12 @@ def create_webhook_router(
         if audit_logger:
             audit_logger.log("github_webhook", {"event": event})
         logger.info("GitHub webhook received: %s", event)
+        if (
+            task_manager
+            and event == "issues"
+            and payload.get("action") in {"edited", "labeled", "unlabeled"}
+        ):
+            task_manager._trigger_sync()
         return {"success": True}
 
     return router

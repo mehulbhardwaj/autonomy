@@ -155,6 +155,7 @@ def create_app(
             override_store,
             audit_logger=audit_logger,
             rate_limit=webhook_rate_limit,
+            task_manager=task_manager,
         )
     )
 
