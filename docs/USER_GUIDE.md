@@ -174,9 +174,15 @@ autonomy doctor nightly
 
 ### Metrics and Reporting
 
+Daily metrics include weekly active users (WAU), approval rates,
+time-to-task statistics and other workflow insights.
+
 ```bash
 # View daily metrics
 autonomy metrics daily
+
+# Monitor weekly active users and approval rate
+autonomy metrics daily --repos owner/repo
 
 # Export metrics
 autonomy metrics export --format json
