@@ -1,5 +1,5 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from hashlib import sha1
 from pathlib import Path
 from typing import Any, Dict
@@ -93,6 +93,68 @@ class AuditLogger:
                 if details.get("tool") == cmd or details.get("action") == cmd:
                     count += 1
         return count
+
+    def count_ai_recommendations(self, days: int = 7) -> int:
+        """Return count of automated actions in the last ``days``."""
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        count = 0
+        for entry in self.iter_logs() or []:
+            if entry.get("operation") == "tool_execute":
+                ts = entry.get("timestamp")
+                try:
+                    dt = datetime.fromisoformat(ts)
+                except Exception:
+                    continue
+                if dt >= cutoff:
+                    count += 1
+        return count
+
+    def count_approvals(self, days: int = 7) -> int:
+        """Return count of successful automated actions in ``days``."""
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        count = 0
+        for entry in self.iter_logs() or []:
+            if entry.get("operation") == "tool_execute":
+                ts = entry.get("timestamp")
+                try:
+                    dt = datetime.fromisoformat(ts)
+                except Exception:
+                    continue
+                if dt >= cutoff and entry.get("details", {}).get("success"):
+                    count += 1
+        return count
+
+    def count_undo_operations(self, days: int = 7) -> int:
+        """Return number of undo events in ``days``."""
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        cnt = 0
+        for entry in self.iter_logs() or []:
+            if entry.get("operation") == "undo_operation":
+                ts = entry.get("timestamp")
+                try:
+                    dt = datetime.fromisoformat(ts)
+                except Exception:
+                    continue
+                if dt >= cutoff:
+                    cnt += 1
+        return cnt
+
+    def weekly_active_users(self, days: int = 7) -> int:
+        """Return count of unique agents who executed tools in ``days``."""
+        cutoff = datetime.utcnow() - timedelta(days=days)
+        users = set()
+        for entry in self.iter_logs() or []:
+            if entry.get("operation") == "tool_execute":
+                ts = entry.get("timestamp")
+                try:
+                    dt = datetime.fromisoformat(ts)
+                except Exception:
+                    continue
+                if dt >= cutoff:
+                    agent = entry.get("details", {}).get("agent")
+                    if agent:
+                        users.add(agent)
+        return len(users)
 
     # ------------------------------------------------------------------
     # Internal helpers
