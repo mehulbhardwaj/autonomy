@@ -30,18 +30,18 @@ case "$TYPE" in
 esac
 NEW="$MAJ.$MIN.$PAT"
 
+if ! git diff --quiet; then
+  echo "Uncommitted changes present, aborting" >&2
+  exit 1
+fi
+
 echo "Bumping version: $CURRENT -> $NEW"
 # Update files
 sed -i -E "s/version = \"$CURRENT\"/version = \"$NEW\"/" pyproject.toml
 sed -i -E "s/__version__ = \"$CURRENT\"/__version__ = \"$NEW\"/" src/__init__.py
 
 echo "Creating git commit and tag"
-if git diff --quiet; then
-  git add pyproject.toml src/__init__.py
-  git commit -m "Bump version to $NEW"
-  git tag -a "v$NEW" -m "Release v$NEW"
-else
-  echo "Uncommitted changes present, aborting" >&2
-  exit 1
-fi
+git add pyproject.toml src/__init__.py
+git commit -m "Bump version to $NEW"
+git tag -a "v$NEW" -m "Release v$NEW"
 
