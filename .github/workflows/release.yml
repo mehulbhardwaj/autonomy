@@ -31,7 +31,7 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
-      - name: Bump version
+      - name: Bump version and create PR
         if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
         env:
           VERSION_TYPE: ${{ github.event.inputs.version_type }}
@@ -40,10 +40,8 @@ jobs:
 
         run: |
           TYPE=${VERSION_TYPE:-patch}
-          ./scripts/bump-version.sh "$TYPE"
+          ./scripts/bump-version-pr.sh "$TYPE"
           ./scripts/release-notes.sh
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}
-          git push --follow-tags
       
       - name: Set up Python
         uses: actions/setup-python@v5
