@@ -35,6 +35,10 @@ if ! git diff --quiet; then
   exit 1
 fi
 
+# Fetch latest tags from remote
+echo "Fetching latest tags from remote"
+git fetch --tags
+
 echo "Bumping version: $CURRENT -> $NEW"
 # Update files
 sed -i -E "s/version = \"$CURRENT\"/version = \"$NEW\"/" pyproject.toml
@@ -44,9 +48,9 @@ echo "Creating git commit and tag"
 git add pyproject.toml src/__init__.py
 git commit -m "Bump version to $NEW"
 
-# Check if tag already exists
+# Check if tag already exists locally
 if git tag -l "v$NEW" | grep -q "v$NEW"; then
-  echo "Tag v$NEW already exists, reusing it"
+  echo "Local tag v$NEW already exists, deleting it"
   git tag -d "v$NEW" 2>/dev/null || true
 fi
 git tag -a "v$NEW" -m "Release v$NEW"
@@ -63,6 +67,12 @@ fi
 
 # Push the branch and tag
 git push origin "$BRANCH_NAME"
+
+# Handle remote tag - check if it exists and delete if needed
+if git ls-remote --tags origin "v$NEW" | grep -q "v$NEW"; then
+  echo "Remote tag v$NEW already exists, deleting it first"
+  git push origin ":refs/tags/v$NEW"
+fi
 git push origin "v$NEW"
 
 # Check if PR already exists for this version
