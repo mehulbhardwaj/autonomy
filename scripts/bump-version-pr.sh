@@ -97,8 +97,7 @@ This PR was created by the release workflow to bump the version from $CURRENT to
 
 Please review and merge to complete the release." \
     --base main \
-    --head "$BRANCH_NAME" \
-    --label "release"
+    --head "$BRANCH_NAME"
 
   echo "Pull request created for version $NEW"
   echo "Please review and merge the PR to complete the release"
