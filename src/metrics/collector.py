@@ -43,6 +43,7 @@ class MetricsCollector:
                 curr_wau, prev.get("weekly_active_users") if prev else None
             ),
             "override_rate": self.calculate_override_rate(),
+            "undo_rate": self.calculate_undo_rate(),
             "loc_per_assignee": self.calculate_loc_per_assignee(),
             "sprint_completion_rate": self.calculate_sprint_completion(),
             "open_issues_count": self.github.get_open_issues_count(repository),
@@ -97,6 +98,13 @@ class MetricsCollector:
         overrides = self.audit.count_human_overrides()
         return (overrides / total * 100) if total > 0 else 0.0
 
+    def calculate_undo_rate(self) -> float:
+        total = self.audit.count_ai_recommendations(days=7)
+        undos = 0
+        if hasattr(self.audit, "count_undo_operations"):
+            undos = self.audit.count_undo_operations(days=7)
+        return (undos / total * 100) if total > 0 else 0.0
+
     @staticmethod
     def calculate_trend(current: float, previous: float | None) -> float:
         if previous is None or previous == 0:
@@ -115,7 +123,8 @@ class MetricsCollector:
             f"**👥 Team Activity**\n"
             f"• Weekly active users: {metrics['weekly_active_users']} team members\n"
             f"• Planning commands used: {metrics['planning_commands_used']} today\n"
-            f"• Human overrides: {metrics['human_overrides_count']} (learning opportunities)\n\n"
+            f"• Human overrides: {metrics['human_overrides_count']} (learning opportunities)\n"
+            f"• Undo rate: {metrics['undo_rate']:.1f}%\n\n"
             f"**📈 Development Velocity**\n"
             f"• LOC per assignee: {metrics['loc_per_assignee']} avg\n"
             f"• Open issues: {metrics['open_issues_count']}\n"

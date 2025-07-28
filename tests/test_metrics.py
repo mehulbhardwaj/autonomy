@@ -63,6 +63,7 @@ def test_metrics_collection_and_storage(tmp_path: Path) -> None:
     assert files
     data = json.loads(files[0].read_text())
     assert "orphan_issues_count" in data
+    assert "undo_rate" in data
 
 
 def test_storage_filters_personal_data(tmp_path: Path) -> None:
