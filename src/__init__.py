@@ -45,7 +45,7 @@ from .tasks.nightly_service import NightlyDoctorService
 from .tasks.task_manager import TaskManager
 from .tools import GitHubTools, MemoryTools, SlackTools, ToolRegistry
 
-__version__ = "0.1.1"
+__version__ = "0.1.2"
 __author__ = "Mehul Bhardwaj"
 __email__ = "mehul@example.com"
 __license__ = "GPL-3.0-or-later"
